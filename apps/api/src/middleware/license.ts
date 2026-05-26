@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { DEPLOYMENT_MODE, LICENSE_KEY, LICENSE_REQUIRED } from "../config.js";
 import { verifyHmacToken, safeCompare } from "../licensing/core.js";
-import { verifyLicenseHeader } from "../licensing/service.js";
+import { getActiveLicense, verifyLicenseHeader } from "../licensing/service.js";
 
 function readLicenseHeader(req: Request): string {
   return (req.headers["x-dental-lab-license"] as string | undefined)?.trim() ?? "";
@@ -16,7 +16,14 @@ export function verifyLicenseHeaderLegacy(req: Request): boolean {
   return verifyHmacToken(header, LICENSE_KEY);
 }
 
-const EXEMPT_PREFIXES = ["/api/health", "/api/license", "/api/licencas", "/api/auth/status"];
+const EXEMPT_PREFIXES = [
+  "/api/health",
+  "/api/license",
+  "/api/licencas",
+  "/api/auth/status",
+  "/api/auth/login",
+  "/api/auth/recuperar-senha",
+];
 
 function requestPath(req: Request): string {
   const p = req.originalUrl.split("?")[0] ?? req.path;
@@ -48,6 +55,9 @@ export async function licenseGate(req: Request, res: Response, next: NextFunctio
     // BFF do ERP já valida sessão e habilitação do módulo; JWT vai em Authorization.
     return next();
   }
+
+  const active = await getActiveLicense(clinicaId, null);
+  if (active?.status === "active") return next();
 
   if (!LICENSE_KEY) {
     return res.status(503).json({
