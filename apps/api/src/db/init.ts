@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
@@ -317,7 +318,6 @@ async function initPostgres() {
     );
     if (adminCheck.rowCount === 0) {
       const { randomUUID } = await import("crypto");
-      const bcrypt = await import("bcryptjs");
       const hash = await bcrypt.hash("admin123", 10);
       await pool.query(
         `INSERT INTO ${POSTGRES_SCHEMA}.lab_usuarios (id, clinica_id, nome, email, senha_hash, perfil)
@@ -360,7 +360,6 @@ export async function initDb(): Promise<void> {
     .get();
   if (!adminUser) {
     const { randomUUID } = await import("crypto");
-    const bcrypt = await import("bcryptjs");
     const hash = bcrypt.hashSync("admin123", 10);
     db.prepare(
       `INSERT INTO lab_usuarios (id, clinica_id, nome, email, senha_hash, perfil) VALUES (?, 1, 'admin', 'admin@dentallab.local', ?, 'admin')`,
