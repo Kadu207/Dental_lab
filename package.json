@@ -1,0 +1,22 @@
+{
+  "name": "dental-lab-system",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @dental/api & npm run dev -w @dental/web",
+    "dev:api": "npm run dev -w @dental/api",
+    "dev:web": "npm run dev -w @dental/web",
+    "build": "npm run build -w @dental/labels && npm run build -w @dental/api && npm run build -w @dental/web",
+    "build:labels": "npm run build -w @dental/labels",
+    "build:api": "npm run build -w @dental/api",
+    "build:web": "npm run build -w @dental/web",
+    "build:web:embedded": "npm run build:embedded -w @dental/web",
+    "docker:standalone:up": "docker compose -f docker-compose.standalone.yml up -d --build",
+    "docker:standalone:down": "docker compose -f docker-compose.standalone.yml down",
+    "smoke:standalone": "powershell -ExecutionPolicy Bypass -File ./infra/ops/smoke-standalone.ps1",
+    "test": "npm run test -w @dental/labels && npm run test -w @dental/api"
+  }
+}

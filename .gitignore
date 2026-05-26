@@ -1,0 +1,12 @@
+node_modules/
+dist/
+apps/api/data/
+*.db
+.env
+.env.*
+!.env.example
+!.env.*.example
+.DS_Store
+backups/
+*.sql
+apps/web/tsconfig.tsbuildinfo

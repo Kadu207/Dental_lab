@@ -1,0 +1,23 @@
+# Desenvolvimento: API do lab no mesmo Postgres do Excellence (schema dental_lab + tabela usuario do ERP)
+# Uso: docker compose -f docker-compose.embedded.yml up -d
+# Requer Postgres do Excellence em localhost:5432 (ou ajuste DENTAL_LAB_*_URL)
+services:
+  lab-api-embedded:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3333
+      DENTAL_LAB_DEPLOYMENT_MODE: embedded
+      DENTAL_LAB_DB_DRIVER: postgres
+      DENTAL_LAB_DATABASE_URL: postgresql://${ERP_POSTGRES_USER:-excellence}:${ERP_POSTGRES_PASSWORD:-excellence}@${ERP_POSTGRES_HOST:-host.docker.internal}:5432/${ERP_POSTGRES_DB:-excellence}
+      DENTAL_LAB_ERP_DATABASE_URL: postgresql://${ERP_POSTGRES_USER:-excellence}:${ERP_POSTGRES_PASSWORD:-excellence}@${ERP_POSTGRES_HOST:-host.docker.internal}:5432/${ERP_POSTGRES_DB:-excellence}
+      DENTAL_LAB_ERP_JWT_SECRET: ${SECRET_KEY:-dev-secret-change-me}
+      DENTAL_LAB_LICENSE_REQUIRED: "false"
+      DENTAL_LAB_AUTH_REQUIRED: "true"
+      DENTAL_LAB_CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    ports:
+      - "3334:3333"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -1,0 +1,38 @@
+---
+description: Regras Spec Kit e convenções do Dental Lab System
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Dental Lab — Regras do Agente
+
+## Idioma
+
+Responda ao usuário e documente specs em **português (pt-BR)**.
+
+## SDD
+
+Antes de implementar features novas, verifique se existe spec em `specs/`. Siga constitution → specify → plan → tasks → implement.
+
+## Monorepo
+
+- API: `apps/api/src/`
+- Web: `apps/web/src/`
+- Labels: `packages/labels/src/`
+- Não misturar lógica de domínio entre apps; compartilhar via `@dental/labels`
+
+## Segurança
+
+- Toda rota sensível: `requirePolicy`
+- Queries sempre com `clinica_id`
+- Nunca commitar `.env`, backups SQL ou secrets
+- Downloads autenticados: usar `downloadWithAuth`, não `window.open` direto
+
+## Dual-mode
+
+Testar impacto em standalone e embedded ao alterar auth, rotas ou headers.
+
+## Escopo
+
+Mudanças mínimas e focadas. Reutilizar padrões existentes (`withLabClient`, mappers, `api.ts`).

@@ -1,0 +1,68 @@
+# Dental Lab — produção VPS (dentallab.inovatitech.com.br)
+# Uso: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+#
+# Pré-requisitos na VPS:
+#   - nginx + certbot (ver infra/nginx/dentallab.inovatitech.com.br.conf)
+#   - DNS dentallab.inovatitech.com.br → IP da VPS (Cloudflare proxy OK)
+#   - Gerador de licenças em https://licencas.inovatitech.com.br
+
+services:
+  lab-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LAB_POSTGRES_DB:-dental_lab}
+      POSTGRES_USER: ${LAB_POSTGRES_USER:-dental_lab}
+      POSTGRES_PASSWORD: ${LAB_POSTGRES_PASSWORD:?Defina LAB_POSTGRES_PASSWORD no .env}
+    volumes:
+      - lab_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LAB_POSTGRES_USER:-dental_lab} -d ${LAB_POSTGRES_DB:-dental_lab}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lab_internal
+
+  lab-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3333
+      DENTAL_LAB_DEPLOYMENT_MODE: standalone
+      DENTAL_LAB_DB_DRIVER: postgres
+      DENTAL_LAB_DATABASE_URL: postgresql://${LAB_POSTGRES_USER:-dental_lab}:${LAB_POSTGRES_PASSWORD}@lab-postgres:5432/${LAB_POSTGRES_DB:-dental_lab}
+      DENTAL_LAB_AUTH_REQUIRED: "true"
+      DENTAL_LAB_LICENSE_REQUIRED: ${DENTAL_LAB_LICENSE_REQUIRED:-true}
+      DENTAL_LAB_LICENSE_KEY: ${DENTAL_LAB_LICENSE_KEY:-}
+      DENTAL_LAB_LICENSE_SERVER_URL: ${DENTAL_LAB_LICENSE_SERVER_URL:-https://licencas.inovatitech.com.br}
+      DENTAL_LAB_LICENSE_SERVER_API_KEY: ${DENTAL_LAB_LICENSE_SERVER_API_KEY:?Defina DENTAL_LAB_LICENSE_SERVER_API_KEY}
+      DENTAL_LAB_TRIAL_DAYS: ${DENTAL_LAB_TRIAL_DAYS:-30}
+      DENTAL_LAB_JWT_SECRET: ${DENTAL_LAB_JWT_SECRET:?Defina DENTAL_LAB_JWT_SECRET no .env}
+      DENTAL_LAB_CORS_ORIGINS: ${DENTAL_LAB_CORS_ORIGINS:-https://dentallab.inovatitech.com.br}
+    depends_on:
+      lab-postgres:
+        condition: service_healthy
+    networks:
+      - lab_internal
+
+  lab-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.standalone
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${LAB_WEB_PORT:-9180}:8080"
+    depends_on:
+      - lab-api
+    networks:
+      - lab_internal
+
+networks:
+  lab_internal:
+    driver: bridge
+
+volumes:
+  lab_postgres_data:

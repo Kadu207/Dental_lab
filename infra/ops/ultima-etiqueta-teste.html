@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Etiquetas 100×50 mm — PROT-20260522-TEST</title>
+  <style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #111; }
+  .toolbar {
+    padding: 12px 16px; background: #f0f4f8; border-bottom: 1px solid #ccc;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .toolbar button {
+    padding: 8px 20px; background: #1e3a5f; color: #fff;
+    border: none; border-radius: 4px; cursor: pointer; font-size: 14px;
+  }
+  .toolbar .print-hint {
+    flex: 1 1 100%;
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.4;
+  }
+  @media print { .toolbar { display: none !important; } }
+
+  @page { size: 100mm 50mm; margin: 0; }
+  html, body { margin: 0; padding: 0; width: 100mm; }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .etiqueta-100x50 {
+    page-break-after: always;
+    border: none;
+    box-shadow: none;
+    outline: none;
+  }
+  .etiqueta-100x50:last-child { page-break-after: auto; }
+  .etiqueta-100x50 .barcode { background: #fff; padding: 0.5mm 0 0; }
+  .etiqueta-100x50 .header { border-bottom-color: #999; }
+  
+  .etiqueta-100x50 {
+    width: 100mm;
+    height: 50mm;
+    max-width: 100mm;
+    max-height: 50mm;
+    background: #fff;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .etiqueta-100x50 .faixa-via {
+    font-size: 6.5pt;
+    padding: 0.8mm 2mm;
+    flex-shrink: 0;
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.2px;
+    line-height: 1.1;
+  }
+  .via-lab .faixa-via, .via-laboratorio .faixa-via { background: #1e3a5f; }
+  .via-clinica .faixa-via { background: #2d6a4f; }
+  .via-paciente .faixa-via { background: #7b2cbf; }
+  .etiqueta-100x50 .corpo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1.2mm 2.5mm 0.8mm;
+    font-size: 7.5pt;
+    min-height: 0;
+  }
+  .etiqueta-100x50 .conteudo { flex: 1; min-height: 0; overflow: hidden; }
+  .etiqueta-100x50 .header {
+    display: flex;
+    align-items: center;
+    gap: 1.5mm;
+    margin-bottom: 0.6mm;
+    padding-bottom: 0.6mm;
+    border-bottom: 0.25mm solid #ccc;
+  }
+  .etiqueta-100x50 .logo {
+    width: 10mm;
+    height: 10mm;
+    font-size: 8pt;
+    background: #1e3a5f;
+    color: #fff;
+    border-radius: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    flex-shrink: 0;
+    object-fit: contain;
+  }
+  .etiqueta-100x50 img.logo { background: transparent; max-width: 10mm; max-height: 10mm; }
+  .etiqueta-100x50 .empresa-nome {
+    font-size: 8.5pt;
+    font-weight: 700;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .etiqueta-100x50 .campos-list { margin-top: 0.3mm; }
+  .etiqueta-100x50 .linha {
+    display: flex;
+    gap: 1mm;
+    line-height: 1.25;
+    margin-bottom: 0.25mm;
+    align-items: flex-start;
+  }
+  .etiqueta-100x50 .lbl {
+    font-weight: 600;
+    color: #333;
+    min-width: 19mm;
+    flex-shrink: 0;
+    font-size: 7pt;
+  }
+  .etiqueta-100x50 .lbl::after { content: ':'; }
+  .etiqueta-100x50 .val {
+    color: #000;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .etiqueta-100x50 .linha-amostra .val {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.2;
+  }
+  .etiqueta-100x50 .codigo-amostra {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 7.5pt;
+    letter-spacing: 0.2px;
+  }
+  .etiqueta-100x50 .barcode {
+    flex-shrink: 0;
+    text-align: center;
+    background: #f4f6f8;
+    padding: 0.6mm 1mm 0.4mm;
+    margin-top: auto;
+  }
+  .etiqueta-100x50 .barcode svg {
+    display: block;
+    margin: 0 auto;
+    width: 92mm;
+    height: 10mm;
+    max-width: 92mm;
+    max-height: 10mm;
+  }
+  .etiqueta-100x50 .barcode-text {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    margin-top: 0.3mm;
+    line-height: 1;
+  }
+
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="window.print()">Imprimir 3 vias (100×50 mm)</button>
+    <span>Trabalho: <strong>PROT-20260522-TEST</strong> — Lab Smoke Test</span>
+    <p class="print-hint">Térmica 100×50: escala <strong>100%</strong>, margens <strong>nenhuma</strong>, papel personalizado 100×50 mm. Driver Zebra: orientação paisagem, desligar “ajustar à página”. Ver IMPRESSORA-ETIQUETAS.md.</p>
+  </div>
+  
+    <div class="etiqueta etiqueta-100x50 via-lab">
+      <div class="faixa-via">VIA 1 — LABORATÓRIO</div>
+      <div class="corpo">
+        <div class="conteudo">
+          <div class="header">
+            <div class="logo">LS</div>
+            <div class="empresa-nome">Lab Smoke Test</div>
+          </div>
+          <div class="campos-list">
+            <div class="linha "><span class="lbl">Paciente</span><span class="val ">Paciente Teste Calibração</span></div>
+            <div class="linha "><span class="lbl">Telefone</span><span class="val ">(11) 99999-0000</span></div>
+            <div class="linha "><span class="lbl">Nº Amostra</span><span class="val codigo-amostra">PROT-20260522-TEST</span></div>
+            <div class="linha linha-amostra"><span class="lbl">Nome Amostra</span><span class="val ">Coroa teste 100x50 — Elemento 11, 21</span></div>
+            <div class="linha "><span class="lbl">Data</span><span class="val ">22/05/2026</span></div>
+          </div>
+        </div>
+        <div class="barcode">
+          <svg viewBox="0 0 454 66" xmlns="http://www.w3.org/2000/svg">
+<path stroke="#000000" stroke-width="4" d="M18 62L18 4M56 62L56 4M62 62L62 4M100 62L100 4M106 62L106 4M134 62L134 4M172 62L172 4M210 62L210 4M230 62L230 4M238 62L238 4M288 62L288 4M304 62L304 4M334 62L334 4M348 62L348 4M370 62L370 4M392 62L392 4M414 62L414 4M436 62L436 4" />
+<path stroke="#000000" stroke-width="2" d="M23 62L23 4M29 62L29 4M71 62L71 4M83 62L83 4M123 62L123 4M127 62L127 4M149 62L149 4M179 62L179 4M203 62L203 4M215 62L215 4M223 62L223 4M253 62L253 4M259 62L259 4M281 62L281 4M321 62L321 4M325 62L325 4M339 62L339 4M361 62L361 4M387 62L387 4M397 62L397 4M431 62L431 4" />
+<path stroke="#000000" stroke-width="6" d="M41 62L41 4M49 62L49 4M77 62L77 4M93 62L93 4M113 62L113 4M141 62L141 4M155 62L155 4M187 62L187 4M195 62L195 4M247 62L247 4M275 62L275 4M295 62L295 4M311 62L311 4M355 62L355 4M377 62L377 4M407 62L407 4M425 62L425 4" />
+<path stroke="#000000" stroke-width="8" d="M164 62L164 4M266 62L266 4" />
+</svg>
+
+          <div class="barcode-text">PROT-20260522-TEST</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="etiqueta etiqueta-100x50 via-clinica">
+      <div class="faixa-via">VIA 2 — CLÍNICA</div>
+      <div class="corpo">
+        <div class="conteudo">
+          <div class="header">
+            <div class="logo">LS</div>
+            <div class="empresa-nome">Lab Smoke Test</div>
+          </div>
+          <div class="campos-list">
+            <div class="linha "><span class="lbl">Paciente</span><span class="val ">Paciente Teste Calibração</span></div>
+            <div class="linha "><span class="lbl">Telefone</span><span class="val ">(11) 99999-0000</span></div>
+            <div class="linha "><span class="lbl">Nº Amostra</span><span class="val codigo-amostra">PROT-20260522-TEST</span></div>
+            <div class="linha linha-amostra"><span class="lbl">Nome Amostra</span><span class="val ">Coroa teste 100x50 — Elemento 11, 21</span></div>
+            <div class="linha "><span class="lbl">Data</span><span class="val ">22/05/2026</span></div>
+          </div>
+        </div>
+        <div class="barcode">
+          <svg viewBox="0 0 454 66" xmlns="http://www.w3.org/2000/svg">
+<path stroke="#000000" stroke-width="4" d="M18 62L18 4M56 62L56 4M62 62L62 4M100 62L100 4M106 62L106 4M134 62L134 4M172 62L172 4M210 62L210 4M230 62L230 4M238 62L238 4M288 62L288 4M304 62L304 4M334 62L334 4M348 62L348 4M370 62L370 4M392 62L392 4M414 62L414 4M436 62L436 4" />
+<path stroke="#000000" stroke-width="2" d="M23 62L23 4M29 62L29 4M71 62L71 4M83 62L83 4M123 62L123 4M127 62L127 4M149 62L149 4M179 62L179 4M203 62L203 4M215 62L215 4M223 62L223 4M253 62L253 4M259 62L259 4M281 62L281 4M321 62L321 4M325 62L325 4M339 62L339 4M361 62L361 4M387 62L387 4M397 62L397 4M431 62L431 4" />
+<path stroke="#000000" stroke-width="6" d="M41 62L41 4M49 62L49 4M77 62L77 4M93 62L93 4M113 62L113 4M141 62L141 4M155 62L155 4M187 62L187 4M195 62L195 4M247 62L247 4M275 62L275 4M295 62L295 4M311 62L311 4M355 62L355 4M377 62L377 4M407 62L407 4M425 62L425 4" />
+<path stroke="#000000" stroke-width="8" d="M164 62L164 4M266 62L266 4" />
+</svg>
+
+          <div class="barcode-text">PROT-20260522-TEST</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="etiqueta etiqueta-100x50 via-paciente">
+      <div class="faixa-via">VIA 3 — PACIENTE</div>
+      <div class="corpo">
+        <div class="conteudo">
+          <div class="header">
+            <div class="logo">LS</div>
+            <div class="empresa-nome">Lab Smoke Test</div>
+          </div>
+          <div class="campos-list">
+            <div class="linha "><span class="lbl">Paciente</span><span class="val ">Paciente Teste Calibração</span></div>
+            <div class="linha "><span class="lbl">Telefone</span><span class="val ">(11) 99999-0000</span></div>
+            <div class="linha "><span class="lbl">Nº Amostra</span><span class="val codigo-amostra">PROT-20260522-TEST</span></div>
+            <div class="linha linha-amostra"><span class="lbl">Nome Amostra</span><span class="val ">Coroa teste 100x50 — Elemento 11, 21</span></div>
+            <div class="linha "><span class="lbl">Data</span><span class="val ">22/05/2026</span></div>
+          </div>
+        </div>
+        <div class="barcode">
+          <svg viewBox="0 0 454 66" xmlns="http://www.w3.org/2000/svg">
+<path stroke="#000000" stroke-width="4" d="M18 62L18 4M56 62L56 4M62 62L62 4M100 62L100 4M106 62L106 4M134 62L134 4M172 62L172 4M210 62L210 4M230 62L230 4M238 62L238 4M288 62L288 4M304 62L304 4M334 62L334 4M348 62L348 4M370 62L370 4M392 62L392 4M414 62L414 4M436 62L436 4" />
+<path stroke="#000000" stroke-width="2" d="M23 62L23 4M29 62L29 4M71 62L71 4M83 62L83 4M123 62L123 4M127 62L127 4M149 62L149 4M179 62L179 4M203 62L203 4M215 62L215 4M223 62L223 4M253 62L253 4M259 62L259 4M281 62L281 4M321 62L321 4M325 62L325 4M339 62L339 4M361 62L361 4M387 62L387 4M397 62L397 4M431 62L431 4" />
+<path stroke="#000000" stroke-width="6" d="M41 62L41 4M49 62L49 4M77 62L77 4M93 62L93 4M113 62L113 4M141 62L141 4M155 62L155 4M187 62L187 4M195 62L195 4M247 62L247 4M275 62L275 4M295 62L295 4M311 62L311 4M355 62L355 4M377 62L377 4M407 62L407 4M425 62L425 4" />
+<path stroke="#000000" stroke-width="8" d="M164 62L164 4M266 62L266 4" />
+</svg>
+
+          <div class="barcode-text">PROT-20260522-TEST</div>
+        </div>
+      </div>
+    </div>
+</body>
+</html>

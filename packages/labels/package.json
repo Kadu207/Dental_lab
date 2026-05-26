@@ -1,0 +1,27 @@
+{
+  "name": "@dental/labels",
+  "version": "0.2.0",
+  "description": "Módulo de etiquetas com código de barras para próteses dentais — 3 vias",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "npx tsc",
+    "dev": "npx tsc --watch",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "bwip-js": "^4.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
