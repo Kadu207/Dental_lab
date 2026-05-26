@@ -9,4 +9,5 @@ apps/api/data/
 .DS_Store
 backups/
 *.sql
+!apps/api/src/db/schema-postgres.sql
 apps/web/tsconfig.tsbuildinfo
