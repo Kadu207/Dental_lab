@@ -59,14 +59,10 @@ export async function licenseGate(req: Request, res: Response, next: NextFunctio
   const active = await getActiveLicense(clinicaId, null);
   if (active?.status === "active") return next();
 
-  if (!LICENSE_KEY) {
-    return res.status(503).json({
-      erro: "Módulo laboratório: licença exigida mas nenhuma chave configurada ou ativada.",
-    });
-  }
+  // Chave no .env (standalone) dispensa header X-Dental-Lab-License em cada request
+  if (LICENSE_KEY) return next();
 
-  return res.status(403).json({
-    erro: "Módulo laboratório: licença ausente. Envie X-Dental-Lab-License.",
-    code: "LAB_LICENSE_INVALID",
+  return res.status(503).json({
+    erro: "Módulo laboratório: licença exigida mas nenhuma chave configurada ou ativada.",
   });
 }
