@@ -64,8 +64,10 @@ async function sleep(ms: number): Promise<void> {
 
 async function parseError(res: Response): Promise<LicenseServerError> {
   const body = (await res.json().catch(() => ({}))) as { detail?: string; erro?: string; code?: string };
-  const msg = body.detail ?? body.erro ?? res.statusText;
-  return new LicenseServerError(msg, body.code ?? "LICENSE_SERVER_ERROR", res.status);
+  const detail = body.detail ?? body.erro ?? res.statusText;
+  const known = typeof detail === "string" && /^LICENSE_[A-Z0-9_]+$/.test(detail) ? detail : null;
+  const code = body.code ?? known ?? "LICENSE_SERVER_ERROR";
+  return new LicenseServerError(String(detail), code, res.status);
 }
 
 async function fetchWithRetry(

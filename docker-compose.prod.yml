@@ -54,7 +54,8 @@ services:
       dockerfile: apps/web/Dockerfile.standalone
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${LAB_WEB_PORT:-9180}:8080"
+      # 0.0.0.0 — nginx do Excellence (Docker) acessa via host.docker.internal:9180
+      - "${LAB_WEB_PORT:-9180}:8080"
     depends_on:
       - lab-api
     networks:
