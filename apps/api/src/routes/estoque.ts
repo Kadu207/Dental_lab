@@ -58,7 +58,7 @@ estoqueRouter.post("/", requirePolicy("estoque", "write"), async (req, res) => {
           localizacao ?? null,
         ],
       );
-      const row = await db.queryOne("SELECT * FROM estoque WHERE id = ?", [id]);
+      const row = await db.queryOne("SELECT * FROM estoque WHERE clinica_id = ? AND id = ?", [getClinicaId(req), id]);
       res.status(201).json(mapEstoque(row!));
     });
   } catch {
@@ -88,7 +88,10 @@ estoqueRouter.put("/:id", requirePolicy("estoque", "write"), async (req, res) =>
       ],
     );
     if (result.changes === 0) return res.status(404).json({ erro: "Item não encontrado" });
-    const row = await db.queryOne("SELECT * FROM estoque WHERE id = ?", [req.params.id]);
+    const row = await db.queryOne("SELECT * FROM estoque WHERE clinica_id = ? AND id = ?", [
+      getClinicaId(req),
+      req.params.id,
+    ]);
     res.json(mapEstoque(row!));
   });
 });
@@ -104,7 +107,10 @@ estoqueRouter.patch("/:id/movimentar", requirePolicy("estoque", "write"), async 
     const novaQtd = tipo === "entrada" ? Number(row.quantidade) + quantidade : Number(row.quantidade) - quantidade;
     if (novaQtd < 0) return res.status(400).json({ erro: "Quantidade insuficiente" });
     await db.run("UPDATE estoque SET quantidade = ? WHERE clinica_id = ? AND id = ?", [novaQtd, getClinicaId(req), req.params.id]);
-    const updated = await db.queryOne("SELECT * FROM estoque WHERE id = ?", [req.params.id]);
+    const updated = await db.queryOne("SELECT * FROM estoque WHERE clinica_id = ? AND id = ?", [
+      getClinicaId(req),
+      req.params.id,
+    ]);
     res.json(mapEstoque(updated!));
   });
 });

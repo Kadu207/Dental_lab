@@ -78,7 +78,7 @@ empresaRouter.post("/unidades", requirePolicy("empresa", "write"), async (req, r
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, cid(req), nome.trim(), cep ?? null, endereco ?? null, numero ?? null, bairro ?? null, cidade ?? null, estado ?? null],
     );
-    const row = await db.queryOne("SELECT * FROM empresa_unidades WHERE id = ?", [id]);
+    const row = await db.queryOne("SELECT * FROM empresa_unidades WHERE clinica_id = ? AND id = ?", [cid(req), id]);
     await ensureUnidadeTrial(db, cid(req), id);
     res.status(201).json(mapUnidade(row!));
   });

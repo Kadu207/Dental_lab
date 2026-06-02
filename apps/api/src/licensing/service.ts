@@ -19,9 +19,18 @@ import {
   remoteLicenseStatus,
   type RemoteLicensePayload,
 } from "./remote-client.js";
-import { ensureMatrizTrial, ensureUnidadeTrial, getTrialRow, trialStatusPayload } from "./trial.js";
+import {
+  ensureDefaultEmpresaAndTrial,
+  ensureMatrizTrial,
+  ensureUnidadeTrial,
+  getTrialRow,
+  isTrialActive,
+  trialStatusPayload,
+} from "./trial.js";
+import { LICENSE_KEY } from "../config.js";
+import { withLabClient } from "../db/client.js";
 
-export { ensureMatrizTrial, ensureUnidadeTrial };
+export { ensureDefaultEmpresaAndTrial, ensureMatrizTrial, ensureUnidadeTrial };
 
 const TABLE = "product_licenses";
 
@@ -84,6 +93,17 @@ function scopeSql(unidadeId?: string | null): { clause: string; params: unknown[
     return { clause: "unidade_id = ?", params: [unidadeId] };
   }
   return { clause: "(unidade_id IS NULL OR unidade_id = '')", params: [] };
+}
+
+/** Trial local, licença ativa ou chave no .env liberam uso do módulo. */
+export async function isLabModuleOperational(clinicaId: number): Promise<boolean> {
+  if (LICENSE_KEY) return true;
+  const active = await getActiveLicense(clinicaId, null);
+  if (active) return true;
+  return withLabClient(clinicaId, async (db) => {
+    const trial = await ensureDefaultEmpresaAndTrial(db, clinicaId);
+    return isTrialActive(trial);
+  });
 }
 
 export async function getActiveLicense(

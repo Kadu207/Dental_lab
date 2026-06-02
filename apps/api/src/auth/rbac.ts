@@ -1,6 +1,13 @@
 import type { Request, Response, NextFunction } from "express";
 
-export type LabPerfil = "admin" | "gestor" | "recepcao" | "laboratorio" | "colaborador" | "estagiario";
+export type LabPerfil =
+  | "supervisor"
+  | "admin"
+  | "gestor"
+  | "recepcao"
+  | "laboratorio"
+  | "colaborador"
+  | "estagiario";
 
 export type PermissaoAcao = "read" | "write" | "delete";
 
@@ -10,6 +17,7 @@ export interface UsuarioPermissao {
 }
 
 export const PERFIS_VALIDOS: LabPerfil[] = [
+  "supervisor",
   "admin",
   "gestor",
   "recepcao",
@@ -18,8 +26,12 @@ export const PERFIS_VALIDOS: LabPerfil[] = [
   "estagiario",
 ];
 
-/** Hierarquia: admin > gestor > recepcao/colaborador > laboratorio > estagiario */
+/** Perfis atribuíveis dentro de um tenant (sem supervisor). */
+export const TENANT_PERFIS: LabPerfil[] = PERFIS_VALIDOS.filter((p) => p !== "supervisor");
+
+/** Hierarquia: supervisor > admin > gestor > recepcao/colaborador > laboratorio > estagiario */
 export const PERFIL_RANK: Record<LabPerfil, number> = {
+  supervisor: 200,
   admin: 100,
   gestor: 80,
   recepcao: 60,
@@ -29,6 +41,7 @@ export const PERFIL_RANK: Record<LabPerfil, number> = {
 };
 
 export const PERFIL_LABELS: Record<LabPerfil, string> = {
+  supervisor: "Supervisor",
   admin: "Administrador",
   gestor: "Gestor",
   recepcao: "Recepção",
@@ -37,7 +50,22 @@ export const PERFIL_LABELS: Record<LabPerfil, string> = {
   estagiario: "Estagiário",
 };
 
+export function perfilRank(perfil: string): number {
+  return PERFIL_RANK[perfil as LabPerfil] ?? 0;
+}
+
+export function isSupervisor(perfil: string): boolean {
+  return perfil === "supervisor";
+}
+
+/** Actor só gerencia usuários com rank estritamente menor (supervisor isento). */
+export function canManagePerfil(actor: LabPerfil, target: LabPerfil): boolean {
+  if (actor === "supervisor") return target !== "supervisor";
+  return perfilRank(actor) > perfilRank(target);
+}
+
 export const DEFAULT_POLICIES: Record<LabPerfil, UsuarioPermissao[]> = {
+  supervisor: [{ resource: "*", actions: ["read", "write", "delete"] }],
   admin: [{ resource: "*", actions: ["read", "write", "delete"] }],
   gestor: [
     { resource: "empresa", actions: ["read", "write"] },
@@ -137,4 +165,8 @@ export function requirePerfis(...allowed: LabPerfil[]) {
     }
     next();
   };
+}
+
+export function requireSupervisor() {
+  return requirePerfis("supervisor");
 }

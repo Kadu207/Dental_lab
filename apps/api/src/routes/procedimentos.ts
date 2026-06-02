@@ -37,7 +37,7 @@ procedimentosRouter.post("/", requirePolicy("procedimentos", "write"), async (re
           Number(comissaoPerc ?? comissao_perc) || 0,
         ],
       );
-      const row = await db.queryOne("SELECT * FROM procedimentos WHERE id = ?", [id]);
+      const row = await db.queryOne("SELECT * FROM procedimentos WHERE clinica_id = ? AND id = ?", [cid(req), id]);
       res.status(201).json(mapProc(row!));
     });
   } catch {
@@ -64,7 +64,10 @@ procedimentosRouter.put("/:id", requirePolicy("procedimentos", "write"), async (
       ],
     );
     if (r.changes === 0) return res.status(404).json({ erro: "Procedimento não encontrado" });
-    const row = await db.queryOne("SELECT * FROM procedimentos WHERE id = ?", [req.params.id]);
+    const row = await db.queryOne("SELECT * FROM procedimentos WHERE clinica_id = ? AND id = ?", [
+      cid(req),
+      req.params.id,
+    ]);
     res.json(mapProc(row!));
   });
 });

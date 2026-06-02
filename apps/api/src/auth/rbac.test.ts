@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { canAccess, parsePermissoes, DEFAULT_POLICIES } from "./rbac.js";
+import {
+  canAccess,
+  canManagePerfil,
+  parsePermissoes,
+  DEFAULT_POLICIES,
+  perfilRank,
+} from "./rbac.js";
 
 describe("RBAC", () => {
   it("estagiario cannot delete clientes", () => {
@@ -40,5 +46,31 @@ describe("RBAC", () => {
     for (const perfil of Object.keys(DEFAULT_POLICIES)) {
       expect(parsePermissoes(null, perfil).length).toBeGreaterThan(0);
     }
+  });
+
+  it("supervisor has highest rank", () => {
+    expect(perfilRank("supervisor")).toBeGreaterThan(perfilRank("admin"));
+    expect(perfilRank("admin")).toBeGreaterThan(perfilRank("gestor"));
+  });
+
+  it("supervisor can manage admin but not another supervisor", () => {
+    expect(canManagePerfil("supervisor", "admin")).toBe(true);
+    expect(canManagePerfil("supervisor", "supervisor")).toBe(false);
+  });
+
+  it("admin cannot manage peer admin or supervisor", () => {
+    expect(canManagePerfil("admin", "gestor")).toBe(true);
+    expect(canManagePerfil("admin", "admin")).toBe(false);
+    expect(canManagePerfil("admin", "supervisor")).toBe(false);
+  });
+
+  it("gestor cannot manage admin", () => {
+    expect(canManagePerfil("gestor", "recepcao")).toBe(true);
+    expect(canManagePerfil("gestor", "admin")).toBe(false);
+  });
+
+  it("supervisor has wildcard access", () => {
+    const perms = parsePermissoes(null, "supervisor");
+    expect(canAccess(perms, "clientes", "delete")).toBe(true);
   });
 });

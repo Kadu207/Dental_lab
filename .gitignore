@@ -10,4 +10,5 @@ apps/api/data/
 backups/
 *.sql
 !apps/api/src/db/schema-postgres.sql
+!apps/api/src/db/schema-platform.sql
 apps/web/tsconfig.tsbuildinfo

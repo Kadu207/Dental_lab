@@ -1,8 +1,8 @@
-import { Router, type Request } from "express";
+import { Router, type Request, type Response } from "express";
 import bcrypt from "bcryptjs";
 import { DEPLOYMENT_MODE } from "../config.js";
 import { listErpUsuarios } from "../auth/erp-users.js";
-import { PERFIS_VALIDOS, requirePolicy, type UsuarioPermissao } from "../auth/rbac.js";
+import { TENANT_PERFIS, canManagePerfil, requirePolicy, type LabPerfil, type UsuarioPermissao } from "../auth/rbac.js";
 import { withLabClient } from "../db/client.js";
 import { newId } from "../db/index.js";
 
@@ -10,6 +10,17 @@ export const usuariosRouter = Router();
 
 function cid(req: Request) {
   return req.auth!.clinicaId;
+}
+
+function actorPerfil(req: Request): LabPerfil {
+  return req.auth!.perfil as LabPerfil;
+}
+
+function forbiddenRank(res: Response) {
+  return res.status(403).json({
+    erro: "Sem permissão para gerenciar usuário com este perfil",
+    code: "FORBIDDEN_RANK",
+  });
 }
 
 usuariosRouter.get("/", requirePolicy("colaboradores", "read"), async (req, res) => {
@@ -50,8 +61,11 @@ usuariosRouter.post("/", requirePolicy("colaboradores", "write"), async (req, re
   }
   const { nome, senha, email, perfil, descricao } = req.body;
   if (!nome?.trim() || !senha) return res.status(400).json({ erro: "Nome e senha são obrigatórios" });
-  if (!PERFIS_VALIDOS.includes(perfil)) {
-    return res.status(400).json({ erro: "Perfil inválido", validos: PERFIS_VALIDOS });
+  if (!TENANT_PERFIS.includes(perfil)) {
+    return res.status(400).json({ erro: "Perfil inválido", validos: TENANT_PERFIS });
+  }
+  if (!canManagePerfil(actorPerfil(req), perfil as LabPerfil)) {
+    return forbiddenRank(res);
   }
   const id = newId();
   const hash = await bcrypt.hash(senha, 10);
@@ -63,8 +77,8 @@ usuariosRouter.post("/", requirePolicy("colaboradores", "write"), async (req, re
         [id, cid(req), nome.trim(), email ?? null, hash, perfil, descricao ?? null],
       );
       const row = await db.queryOne(
-        "SELECT id, nome, email, perfil, ativo, permissoes, descricao, created_at FROM lab_usuarios WHERE id = ?",
-        [id],
+        "SELECT id, nome, email, perfil, ativo, permissoes, descricao, created_at FROM lab_usuarios WHERE clinica_id = ? AND id = ?",
+        [cid(req), id],
       );
       res.status(201).json(mapUser(row!));
     });
@@ -79,11 +93,27 @@ usuariosRouter.put("/:id", requirePolicy("colaboradores", "write"), async (req, 
   }
   const { nome, email, perfil, senha, descricao, ativo } = req.body;
   await withLabClient(cid(req), async (db) => {
-    const atual = await db.queryOne("SELECT id FROM lab_usuarios WHERE clinica_id = ? AND id = ?", [
-      cid(req),
-      req.params.id,
-    ]);
+    const atual = await db.queryOne<{ id: string; perfil: string }>(
+      "SELECT id, perfil FROM lab_usuarios WHERE clinica_id = ? AND id = ?",
+      [cid(req), req.params.id],
+    );
     if (!atual) return res.status(404).json({ erro: "Usuário não encontrado" });
+
+    const targetPerfil = (perfil ?? atual.perfil) as LabPerfil;
+    const isSelf = String(req.auth!.userId) === req.params.id;
+
+    if (perfil && !TENANT_PERFIS.includes(perfil)) {
+      return res.status(400).json({ erro: "Perfil inválido", validos: TENANT_PERFIS });
+    }
+
+    if (!isSelf || perfil !== atual.perfil) {
+      if (!canManagePerfil(actorPerfil(req), atual.perfil as LabPerfil)) {
+        return forbiddenRank(res);
+      }
+      if (perfil && !canManagePerfil(actorPerfil(req), targetPerfil)) {
+        return forbiddenRank(res);
+      }
+    }
 
     if (senha) {
       const hash = await bcrypt.hash(senha, 10);
@@ -98,8 +128,8 @@ usuariosRouter.put("/:id", requirePolicy("colaboradores", "write"), async (req, 
       );
     }
     const row = await db.queryOne(
-      "SELECT id, nome, email, perfil, ativo, permissoes, descricao, created_at FROM lab_usuarios WHERE id = ?",
-      [req.params.id],
+      "SELECT id, nome, email, perfil, ativo, permissoes, descricao, created_at FROM lab_usuarios WHERE clinica_id = ? AND id = ?",
+      [cid(req), req.params.id],
     );
     res.json(mapUser(row!));
   });
@@ -130,6 +160,14 @@ usuariosRouter.delete("/:id", requirePolicy("colaboradores", "delete"), async (r
     return res.status(400).json({ erro: "Não é possível excluir o próprio usuário" });
   }
   await withLabClient(cid(req), async (db) => {
+    const alvo = await db.queryOne<{ perfil: string }>(
+      "SELECT perfil FROM lab_usuarios WHERE clinica_id = ? AND id = ?",
+      [cid(req), req.params.id],
+    );
+    if (!alvo) return res.status(404).json({ erro: "Usuário não encontrado" });
+    if (!canManagePerfil(actorPerfil(req), alvo.perfil as LabPerfil)) {
+      return forbiddenRank(res);
+    }
     const r = await db.run("DELETE FROM lab_usuarios WHERE clinica_id = ? AND id = ?", [cid(req), req.params.id]);
     if (r.changes === 0) return res.status(404).json({ erro: "Usuário não encontrado" });
     res.status(204).send();

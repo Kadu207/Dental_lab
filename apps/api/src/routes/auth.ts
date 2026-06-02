@@ -2,7 +2,9 @@ import { Router } from "express";
 import { AUTH_REQUIRED, DEPLOYMENT_MODE, JWT_TTL_MINUTES } from "../config.js";
 import { requestPasswordReset, resetPasswordWithToken, verifyPasswordResetToken } from "../auth/password-reset.js";
 import { loginStandalone } from "../auth/standalone.js";
+import { loginPlatformUser } from "../auth/platform.js";
 import { withLabClient } from "../db/client.js";
+import { ensureDefaultEmpresaAndTrial } from "../licensing/service.js";
 
 export const authRouter = Router();
 
@@ -32,8 +34,25 @@ authRouter.post("/login", async (req, res) => {
   }
 
   try {
+    const platformLogin = await loginPlatformUser(usuario, senha);
+    if (platformLogin) {
+      return res.json({
+        token: platformLogin.token,
+        expiresInMinutes: JWT_TTL_MINUTES,
+        nome: platformLogin.auth.sub,
+        perfil: platformLogin.auth.perfil,
+        clinicaId: platformLogin.auth.clinicaId,
+        modo: platformLogin.auth.mode,
+        isPlatformUser: true,
+      });
+    }
+
     const cid = Number(clinicaId ?? 1);
-    const result = await withLabClient(cid, async (db) => loginStandalone(db, usuario, senha, cid));
+    const result = await withLabClient(cid, async (db) => {
+      const login = await loginStandalone(db, usuario, senha, cid);
+      await ensureDefaultEmpresaAndTrial(db, cid);
+      return login;
+    });
     res.json({
       token: result.token,
       expiresInMinutes: JWT_TTL_MINUTES,
@@ -58,6 +77,7 @@ authRouter.get("/me", async (req, res) => {
     modo: req.auth.mode,
     userId: req.auth.userId,
     permissoes: req.auth.permissoes,
+    isPlatformUser: req.auth.isPlatformUser ?? false,
   });
 });
 

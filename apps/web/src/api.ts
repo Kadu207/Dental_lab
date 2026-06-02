@@ -25,12 +25,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const { headers: optHeaders, ...rest } = options ?? {};
   const res = await fetch(`${BASE}${path}`, {
     ...rest,
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...authHeaders(),
       ...(optHeaders as Record<string, string> | undefined),
     },
   });
+  if (res.status === 304) {
+    throw new Error("Resposta em cache inválida. Recarregue a página (Ctrl+Shift+R).");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ erro: res.statusText }));
     throw new Error(err.erro ?? "Erro na requisição");
@@ -43,14 +47,26 @@ export const api = {
   auth: {
     status: () => request<{ authRequired: boolean; deploymentMode: string; loginDisponivel: boolean }>("/auth/status"),
     login: (usuario: string, senha: string, clinicaId?: number) =>
-      request<{ token: string; nome: string; perfil: string; clinicaId: number }>("/auth/login", {
+      request<{
+        token: string;
+        nome: string;
+        perfil: string;
+        clinicaId: number;
+        isPlatformUser?: boolean;
+      }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ usuario, senha, clinicaId }),
       }),
     me: () =>
-      request<{ sub: string; perfil: string; clinicaId: number; modo: string; userId?: string; permissoes?: UsuarioPermissao[] }>(
-        "/auth/me",
-      ),
+      request<{
+        sub: string;
+        perfil: string;
+        clinicaId: number;
+        modo: string;
+        userId?: string;
+        permissoes?: UsuarioPermissao[];
+        isPlatformUser?: boolean;
+      }>("/auth/me"),
     solicitarRecuperacaoSenha: (usuario: string, email: string, clinicaId?: number) =>
       request<{ ok: boolean; resetToken?: string; mensagem: string }>("/auth/recuperar-senha/solicitar", {
         method: "POST",
@@ -203,6 +219,30 @@ export const api = {
     assign: (userId: string, role: string) =>
       request<{ msg: string }>("/grupos/permissoes", { method: "POST", body: JSON.stringify({ userId, role }) }),
     remove: (id: string) => request<void>(`/grupos/permissoes/${id}`, { method: "DELETE" }),
+  },
+  supervisor: {
+    listTenants: () => request<TenantRecord[]>("/supervisor/tenants"),
+    getTenant: (clinicaId: number) => request<TenantRecord>(`/supervisor/tenants/${clinicaId}`),
+    createTenant: (data: Partial<TenantRecord>) =>
+      request<TenantRecord>("/supervisor/tenants", { method: "POST", body: JSON.stringify(data) }),
+    updateTenant: (clinicaId: number, data: Partial<TenantRecord>) =>
+      request<TenantRecord>(`/supervisor/tenants/${clinicaId}`, { method: "PUT", body: JSON.stringify(data) }),
+    licenseStatus: (clinicaId: number) =>
+      request<TenantLicenseStatus>(`/supervisor/tenants/${clinicaId}/licenca/status`),
+    listLicenses: (clinicaId: number) => request<TenantLicenseRow[]>(`/supervisor/tenants/${clinicaId}/licencas`),
+    generateLicense: (
+      clinicaId: number,
+      data: { produto?: string; periodo?: string; clienteNome?: string; notes?: string },
+    ) =>
+      request<TenantLicenseRow>(`/supervisor/tenants/${clinicaId}/licencas/gerar`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    changePassword: (senhaAtual: string, novaSenha: string) =>
+      request<{ ok: boolean; mensagem: string }>("/supervisor/conta/senha", {
+        method: "PUT",
+        body: JSON.stringify({ senhaAtual, novaSenha }),
+      }),
   },
 };
 
@@ -409,6 +449,45 @@ export interface GrupoAtribuicao {
   usuarioNome?: string;
   role: string;
   createdAt?: string;
+}
+
+export interface TenantRecord {
+  clinicaId: number;
+  postgresSchema: string;
+  nomeFantasia: string | null;
+  razaoSocial: string | null;
+  cnpj: string | null;
+  clienteCodigo: string | null;
+  status: "active" | "suspended" | "provisioning";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TenantLicenseRow {
+  id: number;
+  licenseKey: string;
+  clinicaId: number | null;
+  unidadeId: string | null;
+  produto: string;
+  produtoLabel: string;
+  periodo: string;
+  periodoLabel: string;
+  clienteNome: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  createdAt: string;
+  createdBy: string;
+  notes: string;
+}
+
+export interface TenantLicenseStatus {
+  tenant: TenantRecord;
+  localStatus: Record<string, unknown>;
+  remoteStatus: Record<string, unknown> | null;
+  remoteError: string | null;
+  remoteEnabled: boolean;
+  geradorUrl: string;
 }
 
 export const STATUS_LABELS: Record<string, string> = {

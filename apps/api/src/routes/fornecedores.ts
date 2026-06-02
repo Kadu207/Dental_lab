@@ -47,7 +47,7 @@ fornecedoresRouter.post("/", requirePolicy("fornecedores", "write"), async (req,
         observacoes ?? null,
       ],
     );
-    const row = await db.queryOne("SELECT * FROM fornecedores WHERE id = ?", [id]);
+    const row = await db.queryOne("SELECT * FROM fornecedores WHERE clinica_id = ? AND id = ?", [getClinicaId(req), id]);
     res.status(201).json(mapFornecedor(row!));
   });
 });
@@ -72,7 +72,10 @@ fornecedoresRouter.put("/:id", requirePolicy("fornecedores", "write"), async (re
       ],
     );
     if (result.changes === 0) return res.status(404).json({ erro: "Fornecedor não encontrado" });
-    const row = await db.queryOne("SELECT * FROM fornecedores WHERE id = ?", [req.params.id]);
+    const row = await db.queryOne("SELECT * FROM fornecedores WHERE clinica_id = ? AND id = ?", [
+      getClinicaId(req),
+      req.params.id,
+    ]);
     res.json(mapFornecedor(row!));
   });
 });

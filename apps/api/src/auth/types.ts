@@ -7,4 +7,6 @@ export interface AuthContext {
   sub: string;
   perfil: string;
   permissoes?: UsuarioPermissao[];
+  /** Conta supervisor (platform_usuarios), fora do schema tenant */
+  isPlatformUser?: boolean;
 }

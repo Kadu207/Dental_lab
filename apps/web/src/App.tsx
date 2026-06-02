@@ -1,7 +1,8 @@
-import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { AuthGate } from "./components/AuthGate";
 import { LicenseBanner } from "./components/LicenseBanner";
-import { IS_EMBEDDED, clearLabSession, getLabUser } from "./lib/auth";
+import { SupervisorTenantSelector, useSupervisorTenants } from "./components/SupervisorTenantSelector";
+import { IS_EMBEDDED, clearLabSession, getLabUser, getSupervisorTenantId, isPlatformUser } from "./lib/auth";
 import { canSeeMenu } from "./lib/permissions";
 import { SessionProvider, useSession } from "./lib/SessionContext";
 import LoginPage from "./pages/Login";
@@ -20,10 +21,13 @@ import SetoresPage from "./pages/Setores";
 import RelatoriosPage from "./pages/Relatorios";
 import ColaboradoresPage from "./pages/Colaboradores";
 import EmpresaPage from "./pages/Empresa";
+import GeradorLicencasPage from "./pages/GeradorLicencas";
 import FinanceiroPage from "./pages/Financeiro";
 import ProcedimentosPage from "./pages/Procedimentos";
 import GruposPage from "./pages/Grupos";
 import EtiquetasPage from "./pages/Etiquetas";
+import SupervisorTenantsPage from "./pages/SupervisorTenants";
+import SupervisorContaPage from "./pages/SupervisorConta";
 
 type NavItem = { to: string; label: string; resource: string; end?: boolean; standaloneOnly?: boolean };
 type NavSection = { title: string; items: NavItem[] };
@@ -66,8 +70,12 @@ function filterNavSections(permissoes: ReturnType<typeof useSession>["permissoes
 function AppShell() {
   const navigate = useNavigate();
   const { permissoes, loading, perfil } = useSession();
-  const sections = filterNavSections(permissoes, loading);
+  const isSupervisor = perfil === "supervisor" || isPlatformUser();
+  const { tenants: supervisorTenants } = useSupervisorTenants(isSupervisor);
+  const sections = isSupervisor ? [] : filterNavSections(permissoes, loading);
   const user = getLabUser();
+  const isAdmin = perfil === "admin";
+  const supervisorTenantSelected = getSupervisorTenantId();
 
   function handleLogout() {
     clearLabSession();
@@ -86,18 +94,53 @@ function AppShell() {
               {perfil ? ` · ${perfil}` : ""}
             </div>
           ) : null}
+          {isSupervisor ? (
+            <SupervisorTenantSelector tenants={supervisorTenants} />
+          ) : null}
         </div>
         <nav className="sidebar-nav">
-          {sections.map((section) => (
-            <div key={section.title || "dashboard"}>
-              {section.title ? <div className="nav-section">{section.title}</div> : null}
-              {section.items.map((n) => (
-                <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => (isActive ? "active" : "")}>
-                  {n.label}
-                </NavLink>
-              ))}
+          {isSupervisor ? (
+            <div>
+              <div className="nav-section">Supervisor Inova</div>
+              <NavLink to="/supervisor/tenants" className={({ isActive }) => (isActive ? "active" : "")}>
+                Empresas (tenants)
+              </NavLink>
+              <NavLink to="/supervisor/conta" className={({ isActive }) => (isActive ? "active" : "")}>
+                Alterar senha
+              </NavLink>
+              {supervisorTenantSelected ? (
+                <>
+                  <div className="nav-section" style={{ marginTop: 12 }}>
+                    Tenant #{supervisorTenantSelected}
+                  </div>
+                  {NAV_SECTIONS.flatMap((s) => s.items).map((n) => (
+                    <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => (isActive ? "active" : "")}>
+                      {n.label}
+                    </NavLink>
+                  ))}
+                </>
+              ) : null}
             </div>
-          ))}
+          ) : (
+            sections.map((section) => (
+              <div key={section.title || "dashboard"}>
+                {section.title ? <div className="nav-section">{section.title}</div> : null}
+                {section.items.map((n) => (
+                  <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => (isActive ? "active" : "")}>
+                    {n.label}
+                  </NavLink>
+                ))}
+              </div>
+            ))
+          )}
+          {isAdmin ? (
+            <div>
+              <div className="nav-section">Inova</div>
+              <NavLink to="/admin/licencas" className={({ isActive }) => (isActive ? "active" : "")}>
+                Gerador de licenças
+              </NavLink>
+            </div>
+          ) : null}
         </nav>
         {!IS_EMBEDDED ? (
           <div className="sidebar-footer">
@@ -108,9 +151,14 @@ function AppShell() {
         ) : null}
       </aside>
       <main className="main">
-        <LicenseBanner />
+        {!isSupervisor || supervisorTenantSelected ? <LicenseBanner /> : null}
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route
+            path="/"
+            element={isSupervisor ? <Navigate to="/supervisor/tenants" replace /> : <Dashboard />}
+          />
+          <Route path="/supervisor/tenants" element={<SupervisorTenantsPage />} />
+          <Route path="/supervisor/conta" element={<SupervisorContaPage />} />
           <Route path="/laboratorio" element={<LaboratorioPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/fornecedores" element={<FornecedoresPage />} />
@@ -119,11 +167,15 @@ function AppShell() {
           <Route path="/etiquetas" element={<EtiquetasPage />} />
           <Route path="/setores" element={<SetoresPage />} />
           <Route path="/empresa" element={<EmpresaPage />} />
+          {!IS_EMBEDDED ? <Route path="/admin/licencas" element={<GeradorLicencasPage />} /> : null}
           <Route path="/financeiro" element={<FinanceiroPage />} />
           <Route path="/procedimentos" element={<ProcedimentosPage />} />
           <Route path="/grupos" element={<GruposPage />} />
           <Route path="/relatorios" element={<RelatoriosPage />} />
-          {!IS_EMBEDDED ? <Route path="/colaboradores" element={<ColaboradoresPage />} /> : null}
+          {!IS_EMBEDDED && !isSupervisor ? <Route path="/colaboradores" element={<ColaboradoresPage />} /> : null}
+          {!IS_EMBEDDED && isSupervisor && supervisorTenantSelected ? (
+            <Route path="/colaboradores" element={<ColaboradoresPage />} />
+          ) : null}
           <Route path="/configuracao" element={<ConfiguracaoPage />} />
           <Route path="/scanner" element={<ScannerPage />} />
         </Routes>

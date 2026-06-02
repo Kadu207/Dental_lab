@@ -60,7 +60,7 @@ clientesRouter.post("/sync-erp", requirePolicy("clientes", "write"), async (req,
           existing.id,
         ],
       );
-      const row = await db.queryOne("SELECT * FROM clientes WHERE id = ?", [existing.id]);
+      const row = await db.queryOne("SELECT * FROM clientes WHERE clinica_id = ? AND id = ?", [cid, existing.id]);
       return res.json({ ...mapCliente(row!), synced: true, created: false });
     }
 
@@ -79,7 +79,7 @@ clientesRouter.post("/sync-erp", requirePolicy("clientes", "write"), async (req,
         erpId,
       ],
     );
-    const row = await db.queryOne("SELECT * FROM clientes WHERE id = ?", [stableId]);
+    const row = await db.queryOne("SELECT * FROM clientes WHERE clinica_id = ? AND id = ?", [cid, stableId]);
     res.status(201).json({ ...mapCliente(row!), synced: true, created: true });
   });
 });
@@ -94,7 +94,7 @@ clientesRouter.post("/", requirePolicy("clientes", "write"), async (req, res) =>
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, getClinicaId(req), nome, cpf ?? null, telefone ?? null, email ?? null, endereco ?? null, observacoes ?? null],
     );
-    const row = await db.queryOne("SELECT * FROM clientes WHERE id = ?", [id]);
+    const row = await db.queryOne("SELECT * FROM clientes WHERE clinica_id = ? AND id = ?", [getClinicaId(req), id]);
     res.status(201).json(mapCliente(row!));
   });
 });
@@ -108,7 +108,10 @@ clientesRouter.put("/:id", requirePolicy("clientes", "write"), async (req, res) 
       [nome, cpf ?? null, telefone ?? null, email ?? null, endereco ?? null, observacoes ?? null, getClinicaId(req), req.params.id],
     );
     if (result.changes === 0) return res.status(404).json({ erro: "Cliente não encontrado" });
-    const row = await db.queryOne("SELECT * FROM clientes WHERE id = ?", [req.params.id]);
+    const row = await db.queryOne("SELECT * FROM clientes WHERE clinica_id = ? AND id = ?", [
+      getClinicaId(req),
+      req.params.id,
+    ]);
     res.json(mapCliente(row!));
   });
 });

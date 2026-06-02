@@ -41,7 +41,7 @@ financeiroRouter.post("/", requirePolicy("financeiro", "write"), async (req, res
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, cid(req), tipo, descricao, Number(valor) || 0, dv, st, formaPagamento ?? forma_pagamento ?? null],
     );
-    const row = await db.queryOne("SELECT * FROM financeiro WHERE id = ?", [id]);
+    const row = await db.queryOne("SELECT * FROM financeiro WHERE clinica_id = ? AND id = ?", [cid(req), id]);
     res.status(201).json(mapFin(row!));
   });
 });
@@ -65,7 +65,7 @@ financeiroRouter.put("/:id", requirePolicy("financeiro", "write"), async (req, r
       ],
     );
     if (r.changes === 0) return res.status(404).json({ erro: "Lançamento não encontrado" });
-    const row = await db.queryOne("SELECT * FROM financeiro WHERE id = ?", [req.params.id]);
+    const row = await db.queryOne("SELECT * FROM financeiro WHERE clinica_id = ? AND id = ?", [cid(req), req.params.id]);
     res.json(mapFin(row!));
   });
 });

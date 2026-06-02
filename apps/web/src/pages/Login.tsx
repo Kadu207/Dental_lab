@@ -10,11 +10,11 @@ export default function LoginPage() {
   const [usuario, setUsuario] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
+  const loginState = location.state as { senhaAlterada?: boolean; authErro?: string } | null;
   const [sucesso, setSucesso] = useState(
-    (location.state as { senhaAlterada?: boolean } | null)?.senhaAlterada
-      ? "Senha redefinida com sucesso. Faça login com a nova senha."
-      : "",
+    loginState?.senhaAlterada ? "Senha redefinida com sucesso. Faça login com a nova senha." : "",
   );
+  const authErroInicial = loginState?.authErro ?? "";
   const [loading, setLoading] = useState(false);
 
   if (IS_EMBEDDED) {
@@ -42,8 +42,9 @@ export default function LoginPage() {
         clinicaId: data.clinicaId,
         nome: data.nome,
         perfil: data.perfil,
+        isPlatformUser: data.isPlatformUser ?? data.perfil === "supervisor",
       });
-      navigate("/", { replace: true });
+      navigate(data.perfil === "supervisor" ? "/supervisor/tenants" : "/", { replace: true });
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Falha no login");
     } finally {
@@ -81,6 +82,7 @@ export default function LoginPage() {
           </Link>
         </div>
         {sucesso ? <p className="login-success">{sucesso}</p> : null}
+        {authErroInicial && !erro ? <p className="login-erro">{authErroInicial}</p> : null}
         {erro ? <p className="login-erro">{erro}</p> : null}
         <button type="submit" disabled={loading}>
           {loading ? "Entrando…" : "Entrar"}

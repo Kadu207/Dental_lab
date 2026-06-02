@@ -193,7 +193,10 @@ protesesRouter.patch("/:id/status", requirePolicy("proteses", "write"), async (r
     ]);
     await registrarHistorico(db, getClinicaId(req), String(req.params.id), status, observacao);
 
-    const updated = await db.queryOne("SELECT * FROM proteses WHERE id = ?", [req.params.id]);
+    const updated = await db.queryOne("SELECT * FROM proteses WHERE clinica_id = ? AND id = ?", [
+      getClinicaId(req),
+      req.params.id,
+    ]);
     const protese = await mapProteseFromDb(db, updated!);
     res.json({ protese, historico: await getHistorico(db, getClinicaId(req), protese.id) });
   });
@@ -226,7 +229,10 @@ protesesRouter.patch("/:id/setor", requirePolicy("proteses", "write"), async (re
       req.params.id,
     ]);
     if (r.changes === 0) return res.status(404).json({ erro: "Prótese não encontrada" });
-    const row = await db.queryOne("SELECT * FROM proteses WHERE id = ?", [req.params.id]);
+    const row = await db.queryOne("SELECT * FROM proteses WHERE clinica_id = ? AND id = ?", [
+      getClinicaId(req),
+      req.params.id,
+    ]);
     const protese = await mapProteseFromDb(db, row!);
     res.json({ protese });
   });

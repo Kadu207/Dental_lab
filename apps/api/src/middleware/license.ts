@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { DEPLOYMENT_MODE, LICENSE_KEY, LICENSE_REQUIRED } from "../config.js";
+import { verifyLabToken } from "../auth/jwt.js";
 import { verifyHmacToken, safeCompare } from "../licensing/core.js";
-import { getActiveLicense, verifyLicenseHeader } from "../licensing/service.js";
+import { isLabModuleOperational, verifyLicenseHeader } from "../licensing/service.js";
 
 function readLicenseHeader(req: Request): string {
   return (req.headers["x-dental-lab-license"] as string | undefined)?.trim() ?? "";
@@ -20,14 +21,23 @@ const EXEMPT_PREFIXES = [
   "/api/health",
   "/api/license",
   "/api/licencas",
-  "/api/auth/status",
-  "/api/auth/login",
-  "/api/auth/recuperar-senha",
+  "/api/auth",
+  "/api/supervisor",
 ];
 
 function requestPath(req: Request): string {
   const p = req.originalUrl.split("?")[0] ?? req.path;
   return p.startsWith("/") ? p : `/${p}`;
+}
+
+function isSupervisorToken(req: Request): boolean {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) return false;
+  try {
+    return verifyLabToken(auth.slice(7).trim()).perfil === "supervisor";
+  } catch {
+    return false;
+  }
 }
 
 export async function licenseGate(req: Request, res: Response, next: NextFunction) {
@@ -37,6 +47,8 @@ export async function licenseGate(req: Request, res: Response, next: NextFunctio
   if (EXEMPT_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))) {
     return next();
   }
+
+  if (isSupervisorToken(req)) return next();
 
   const header = readLicenseHeader(req);
   const clinicaId = Number(req.headers["x-clinica-id"] ?? req.auth?.clinicaId ?? 1);
@@ -56,13 +68,10 @@ export async function licenseGate(req: Request, res: Response, next: NextFunctio
     return next();
   }
 
-  const active = await getActiveLicense(clinicaId, null);
-  if (active?.status === "active") return next();
-
-  // Chave no .env (standalone) dispensa header X-Dental-Lab-License em cada request
-  if (LICENSE_KEY) return next();
+  if (await isLabModuleOperational(clinicaId)) return next();
 
   return res.status(503).json({
-    erro: "Módulo laboratório: licença exigida mas nenhuma chave configurada ou ativada.",
+    erro: "Módulo laboratório: licença ou período de teste não disponível. Ative em Empresa → Licença.",
+    code: "LAB_LICENSE_REQUIRED",
   });
 }

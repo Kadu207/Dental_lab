@@ -1,6 +1,10 @@
 import type Database from "better-sqlite3";
-import type { Pool, PoolClient, QueryResultRow } from "pg";
+import type { PoolClient, QueryResultRow } from "pg";
 import { POSTGRES_SCHEMA } from "../config.js";
+import { getPgPool, getSqliteDb, setPgPool, setSqliteDb } from "./pool.js";
+import { resolveTenantSchema } from "../tenants/registry.js";
+
+export { getPgPool, getSqliteDb, setPgPool, setSqliteDb };
 
 export type DbDriverKind = "sqlite" | "postgres";
 
@@ -116,30 +120,14 @@ export class LabDbClient {
   }
 }
 
-let pgPool: Pool | null = null;
-let sqliteDb: Database.Database | null = null;
-
-export function setSqliteDb(db: Database.Database) {
-  sqliteDb = db;
-}
-
-export function setPgPool(pool: Pool) {
-  pgPool = pool;
-}
-
-export function getPgPool(): Pool | null {
-  return pgPool;
-}
-
-export function getSqliteDb(): Database.Database | null {
-  return sqliteDb;
-}
-
 export async function openLabClient(clinicaId: number): Promise<LabDbClient> {
+  const pgPool = getPgPool();
   if (pgPool) {
     const client = await pgPool.connect();
-    return new LabDbClient("postgres", clinicaId, undefined, client);
+    const pgSchema = await resolveTenantSchema(clinicaId);
+    return new LabDbClient("postgres", clinicaId, undefined, client, pgSchema);
   }
+  const sqliteDb = getSqliteDb();
   if (sqliteDb) {
     return new LabDbClient("sqlite", clinicaId, sqliteDb);
   }

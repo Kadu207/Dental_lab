@@ -16,6 +16,9 @@ import { empresaRouter } from "./routes/empresa.js";
 import { financeiroRouter } from "./routes/financeiro.js";
 import { procedimentosRouter } from "./routes/procedimentos.js";
 import { gruposRouter } from "./routes/grupos.js";
+import { supervisorTenantsRouter } from "./routes/supervisor/tenants.js";
+import { supervisorAccountRouter } from "./routes/supervisor/account.js";
+import { getClinicaId } from "./routes/helpers.js";
 import {
   criarRegistroProtese,
   gerarEtiquetas3Vias,
@@ -50,6 +53,8 @@ if (LICENSE_REQUIRED && !LICENSE_KEY) {
 
 const app = express();
 
+app.set("etag", false);
+
 app.use(
   cors({
     origin(origin, cb) {
@@ -72,6 +77,12 @@ app.use(
   }),
 );
 app.use(express.json({ limit: "5mb" }));
+
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.setHeader("Pragma", "no-cache");
+  next();
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({
@@ -103,9 +114,11 @@ app.use(licenseGate);
 app.use(authGate);
 app.use("/api/auth", authRouter);
 app.use("/api/licencas", licencasRouter);
+app.use("/api/supervisor/tenants", supervisorTenantsRouter);
+app.use("/api/supervisor/conta", supervisorAccountRouter);
 
 app.get("/api/config/lab", requirePolicy("config", "read"), async (req, res) => {
-  const cfg = await withLabClient(req.auth!.clinicaId, (db) => db.getLabConfig());
+  const cfg = await withLabClient(getClinicaId(req), (db) => db.getLabConfig());
   res.json(cfg);
 });
 
@@ -119,7 +132,7 @@ app.put("/api/config/lab", requirePolicy("config", "write"), async (req, res) =>
   if (tamanhoEtiquetaPadrao && !tamanhosValidos.includes(tamanhoEtiquetaPadrao)) {
     return res.status(400).json({ erro: "Tamanho de etiqueta inválido", validos: tamanhosValidos });
   }
-  const cfg = await withLabClient(req.auth!.clinicaId, async (db) => {
+  const cfg = await withLabClient(getClinicaId(req), async (db) => {
     const atual = await db.getLabConfig();
     const next = {
       nome: nome.trim(),
@@ -149,7 +162,7 @@ app.get("/api/etiquetas/campos", requirePolicy("config", "read"), (_req, res) =>
 /** Etiqueta de calibração (sem prótese real) — validação na impressora 100×50 mm. */
 app.get("/api/etiquetas/teste-impressao", requirePolicy("config", "read"), async (req, res) => {
   const tamanho = (req.query.tamanho as TamanhoEtiqueta) ?? "termica_100x50";
-  const cfg = await withLabClient(req.auth!.clinicaId, (db) => db.getLabConfig());
+  const cfg = await withLabClient(getClinicaId(req), (db) => db.getLabConfig());
   const hoje = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const demo = criarRegistroProtese({
     id: "teste",

@@ -1,22 +1,37 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { api } from "../api";
-import { IS_EMBEDDED, isAuthenticated } from "../lib/auth";
+import { IS_EMBEDDED, clearLabSession, isAuthenticated } from "../lib/auth";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [ok, setOk] = useState<boolean | null>(null);
+  const [authErro, setAuthErro] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
     if (!isAuthenticated()) {
       setOk(false);
       return;
     }
     api.auth
       .me()
-      .then(() => setOk(true))
-      .catch(() => setOk(false));
-  }, [location.pathname]);
+      .then(() => {
+        if (!cancelled) {
+          setAuthErro("");
+          setOk(true);
+        }
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        clearLabSession();
+        setAuthErro(e instanceof Error ? e.message : "Sessão inválida");
+        setOk(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (ok === null) {
     return (
@@ -36,7 +51,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         </div>
       );
     }
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname, authErro: authErro || "Sessão expirada. Faça login novamente." }}
+      />
+    );
   }
 
   return <>{children}</>;

@@ -56,6 +56,7 @@ export async function authGate(req: Request, res: Response, next: NextFunction) 
         userId: payload.user_id ?? payload.sub,
         sub: payload.sub,
         perfil: payload.perfil,
+        isPlatformUser: payload.perfil === "supervisor" && Number(payload.clinica_id) === 0,
       };
     }
 

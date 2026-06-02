@@ -16,6 +16,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages/labels ./packages/labels
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/src/db/schema-postgres.sql ./apps/api/dist/db/schema-postgres.sql
+COPY --from=build /app/apps/api/src/db/schema-platform.sql ./apps/api/dist/db/schema-platform.sql
 COPY --from=build /app/apps/api/package.json ./apps/api/
 EXPOSE 3333
 CMD ["node", "apps/api/dist/index.js"]

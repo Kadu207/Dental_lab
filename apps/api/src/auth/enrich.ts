@@ -1,10 +1,14 @@
-import { parsePermissoes, PERFIS_VALIDOS, type LabPerfil } from "./rbac.js";
+import { parsePermissoes, PERFIS_VALIDOS, isSupervisor, type LabPerfil } from "./rbac.js";
 
 const PERFIS_LAB = PERFIS_VALIDOS;
 import type { AuthContext } from "./types.js";
 import { withLabClient } from "../db/client.js";
 
 export async function enrichAuthPermissions(auth: AuthContext): Promise<AuthContext> {
+  if (auth.isPlatformUser || isSupervisor(auth.perfil)) {
+    return { ...auth, perfil: "supervisor", permissoes: parsePermissoes(null, "supervisor") };
+  }
+
   if (auth.mode === "embedded") {
     let perfil = mapErpPerfil(auth.perfil);
     const grupo = await withLabClient(auth.clinicaId, (db) =>

@@ -1,6 +1,8 @@
 const TOKEN_KEY = "lab_token";
 const CLINICA_KEY = "lab_clinica_id";
 const USER_KEY = "lab_user";
+const PLATFORM_USER_KEY = "lab_platform_user";
+const SUPERVISOR_TENANT_KEY = "lab_supervisor_tenant_id";
 
 function urlEmbedded(): boolean {
   if (typeof window === "undefined") return false;
@@ -24,10 +26,33 @@ export function getAuthToken(): string | null {
 
 export function getClinicaId(): string | null {
   if (typeof window === "undefined") return null;
+  const user = getLabUser();
+  if (user?.perfil === "supervisor") {
+    return localStorage.getItem(SUPERVISOR_TENANT_KEY);
+  }
   return (
     localStorage.getItem(CLINICA_KEY) ||
     (IS_EMBEDDED ? localStorage.getItem("clinica_id") : null)
   );
+}
+
+export function getSupervisorTenantId(): number | null {
+  const raw = localStorage.getItem(SUPERVISOR_TENANT_KEY);
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+export function setSupervisorTenantId(clinicaId: number | null) {
+  if (clinicaId == null || clinicaId <= 0) {
+    localStorage.removeItem(SUPERVISOR_TENANT_KEY);
+    return;
+  }
+  localStorage.setItem(SUPERVISOR_TENANT_KEY, String(clinicaId));
+}
+
+export function isPlatformUser(): boolean {
+  return localStorage.getItem(PLATFORM_USER_KEY) === "1";
 }
 
 export function setLabSession(data: {
@@ -35,16 +60,25 @@ export function setLabSession(data: {
   clinicaId: number | string;
   nome: string;
   perfil: string;
+  isPlatformUser?: boolean;
 }) {
   localStorage.setItem(TOKEN_KEY, data.token);
   localStorage.setItem(CLINICA_KEY, String(data.clinicaId));
   localStorage.setItem(USER_KEY, JSON.stringify({ nome: data.nome, perfil: data.perfil }));
+  if (data.isPlatformUser || data.perfil === "supervisor") {
+    localStorage.setItem(PLATFORM_USER_KEY, "1");
+    localStorage.removeItem(SUPERVISOR_TENANT_KEY);
+  } else {
+    localStorage.removeItem(PLATFORM_USER_KEY);
+  }
 }
 
 export function clearLabSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(CLINICA_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(PLATFORM_USER_KEY);
+  localStorage.removeItem(SUPERVISOR_TENANT_KEY);
 }
 
 export function getLabUser(): { nome: string; perfil: string } | null {

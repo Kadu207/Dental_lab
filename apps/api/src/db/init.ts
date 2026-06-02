@@ -9,10 +9,14 @@ import {
   DB_DRIVER,
   DEPLOYMENT_MODE,
   ERP_DATABASE_URL,
+  PLATFORM_SCHEMA,
   POSTGRES_SCHEMA,
   SQLITE_PATH,
+  SUPERVISOR_SEED_PASSWORD,
 } from "../config.js";
-import { setPgPool, setSqliteDb } from "./client.js";
+import { ensurePlatformSupervisor } from "../auth/platform.js";
+import { ensureDefaultTenantRegistry } from "../tenants/registry.js";
+import { setPgPool, setSqliteDb } from "./pool.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -311,6 +315,10 @@ async function initPostgres() {
     `ALTER TABLE ${POSTGRES_SCHEMA}.empresa_unidades ADD COLUMN IF NOT EXISTS trial_ends_at TEXT`,
   );
 
+  const platformSql = fs.readFileSync(path.join(__dirname, "schema-platform.sql"), "utf8");
+  await pool.query(platformSql.replace(/\bdental_lab_platform\b/g, PLATFORM_SCHEMA));
+  await ensureDefaultTenantRegistry(pool);
+
   if (DEPLOYMENT_MODE === "standalone") {
     const adminCheck = await pool.query(
       `SELECT id FROM ${POSTGRES_SCHEMA}.lab_usuarios WHERE clinica_id = 1 AND nome = $1`,
@@ -330,6 +338,7 @@ async function initPostgres() {
       `UPDATE ${POSTGRES_SCHEMA}.lab_usuarios SET email = 'admin@dentallab.local'
        WHERE clinica_id = 1 AND lower(nome) = 'admin' AND (email IS NULL OR email = '')`,
     );
+    await ensurePlatformSupervisor(pool, SUPERVISOR_SEED_PASSWORD);
   }
 
   setPgPool(pool);

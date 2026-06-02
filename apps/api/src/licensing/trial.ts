@@ -112,3 +112,27 @@ export function trialStatusPayload(
 export function hasActiveCommercial(_lic: LicenseRow | null): boolean {
   return Boolean(_lic);
 }
+
+export function isTrialActive(trial: TrialRow | null | undefined): boolean {
+  if (!trial?.trial_started_at || !trial.trial_ends_at) return false;
+  const end = parseTs(trial.trial_ends_at);
+  return Boolean(end && end > new Date());
+}
+
+/** Garante registro matriz + trial local (primeiro acesso / pós-reset do banco). */
+export async function ensureDefaultEmpresaAndTrial(
+  db: LabDbClient,
+  clinicaId: number,
+): Promise<TrialRow | null> {
+  const exists = await db.queryOne<{ clinica_id: number }>(
+    "SELECT clinica_id FROM empresa WHERE clinica_id = ?",
+    [clinicaId],
+  );
+  if (!exists) {
+    await db.run(
+      `INSERT INTO empresa (clinica_id, razao_social, nome_fantasia) VALUES (?, ?, ?)`,
+      [clinicaId, "Meu Laboratório", "Meu Laboratório"],
+    );
+  }
+  return ensureMatrizTrial(db, clinicaId);
+}

@@ -79,8 +79,8 @@ licencasRouter.get("/", async (req, res) => {
 });
 
 licencasRouter.post("/gerar", async (req, res) => {
-  if (!req.auth || req.auth.perfil !== "admin") {
-    return res.status(403).json({ erro: "Somente admin/gestor pode gerar licenças" });
+  if (!req.auth || !["admin", "gestor"].includes(req.auth.perfil)) {
+    return res.status(403).json({ erro: "Somente admin ou gestor pode gerar licenças" });
   }
   const produto = String(req.body?.produto ?? "lab").toLowerCase();
   const periodo = String(req.body?.periodo ?? "1y").toLowerCase();

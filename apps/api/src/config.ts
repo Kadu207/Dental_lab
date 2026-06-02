@@ -60,3 +60,9 @@ export const ERP_JWT_SECRET =
 export const JWT_TTL_MINUTES = Number(process.env.DENTAL_LAB_JWT_TTL_MINUTES ?? "480");
 
 export const POSTGRES_SCHEMA = envString("DENTAL_LAB_POSTGRES_SCHEMA", "dental_lab");
+
+/** Registry multi-tenant (tenants + platform_usuarios) */
+export const PLATFORM_SCHEMA = envString("DENTAL_LAB_PLATFORM_SCHEMA", "dental_lab_platform");
+
+export const SUPERVISOR_SEED_PASSWORD =
+  process.env.DENTAL_LAB_SUPERVISOR_PASSWORD?.trim() || "supervisor123";
