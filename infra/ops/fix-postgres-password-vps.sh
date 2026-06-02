@@ -37,7 +37,7 @@ echo "    (conexão local dentro do container — não usa a senha antiga do .en
 
 docker compose -f "$COMPOSE_FILE" --env-file .env exec -T lab-postgres \
   psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 \
-  -c "ALTER USER ${POSTGRES_USER} WITH PASSWORD '${NEW_PASS//\'/\'\'}';"
+  -c "ALTER USER ${POSTGRES_USER} WITH PASSWORD \$${NEW_PASS}\$\$;"
 
 echo "==> Reiniciando lab-api"
 docker compose -f "$COMPOSE_FILE" --env-file .env restart lab-api
