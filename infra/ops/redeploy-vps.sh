@@ -25,8 +25,27 @@ if [[ ! -d "$APP_DIR/.git" ]]; then
 fi
 
 if [[ ! -f "$APP_DIR/.env" ]]; then
-  echo "ERRO: Crie $APP_DIR/.env antes do deploy."
-  exit 1
+  BROKEN_ENV="$(ls -1 "${APP_DIR}".broken.*/.env 2>/dev/null | head -1 || true)"
+  if [[ -n "$BROKEN_ENV" && -f "$BROKEN_ENV" ]]; then
+    echo "==> Restaurando .env de ${BROKEN_ENV}"
+    if [[ -r "$BROKEN_ENV" ]]; then
+      cp "$BROKEN_ENV" "$APP_DIR/.env"
+    else
+      sudo cp "$BROKEN_ENV" "$APP_DIR/.env"
+      sudo chown "${DEPLOY_USER}:${DEPLOY_USER}" "$APP_DIR/.env"
+    fi
+  elif [[ -f /tmp/dental-lab.env.backup ]]; then
+    echo "==> Restaurando .env de /tmp/dental-lab.env.backup (pode precisar sudo)"
+    if [[ -r /tmp/dental-lab.env.backup ]]; then
+      cp /tmp/dental-lab.env.backup "$APP_DIR/.env"
+    else
+      sudo cp /tmp/dental-lab.env.backup "$APP_DIR/.env"
+      sudo chown "${DEPLOY_USER}:${DEPLOY_USER}" "$APP_DIR/.env"
+    fi
+  else
+    echo "ERRO: Crie $APP_DIR/.env (copie de .env.standalone.example ou da pasta .broken.*)"
+    exit 1
+  fi
 fi
 
 cd "$APP_DIR"

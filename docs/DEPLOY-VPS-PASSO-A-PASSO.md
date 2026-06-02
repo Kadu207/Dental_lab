@@ -109,14 +109,22 @@ bash infra/ops/redeploy-vps.sh
 Se o repositório estiver muito corrompido após um reset parcial, reclone preservando o `.env`:
 
 ```bash
+# Backup do .env (sudo cria arquivo root — copie com sudo também)
 sudo cp /opt/dental-lab-system/.env /tmp/dental-lab.env.backup
 sudo mv /opt/dental-lab-system /opt/dental-lab-system.broken.$(date +%Y%m%d)
+
 sudo git clone https://github.com/Kadu207/Dental_lab.git /opt/dental-lab-system
 sudo chown -R "$(whoami):$(whoami)" /opt/dental-lab-system
-cp /tmp/dental-lab.env.backup /opt/dental-lab-system/.env
+
+# Restaurar .env (obrigatório sudo se o backup foi feito com sudo)
+sudo cp /tmp/dental-lab.env.backup /opt/dental-lab-system/.env
+sudo chown "$(whoami):$(whoami)" /opt/dental-lab-system/.env
+# Alternativa se ainda existir a pasta quebrada:
+# sudo cp /opt/dental-lab-system.broken.*/.env /opt/dental-lab-system/.env
+# sudo chown "$(whoami):$(whoami)" /opt/dental-lab-system/.env
+
 cd /opt/dental-lab-system
-docker compose -f docker-compose.prod.yml --env-file .env build --no-cache
-docker compose -f docker-compose.prod.yml --env-file .env up -d
+bash infra/ops/redeploy-vps.sh
 ```
 
 Build e health após checkout OK:
