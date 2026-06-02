@@ -88,20 +88,47 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d
 
 O remote `dental_lab` existe só na sua máquina de desenvolvimento. Na VPS use `origin`.
 
-Se `git pull` falhar com *local changes would be overwritten*, a VPS tem edições manuais antigas. **Descarte-as** e alinhe ao GitHub (não há commits locais importantes na VPS):
+**Importante:** se algum comando Docker foi executado com `sudo`, arquivos em `/opt/dental-lab-system` podem pertencer a `root`. Nesse caso `git reset` falha com `Permission denied`. Corrija o dono **antes** do git:
 
 ```bash
 cd /opt/dental-lab-system
+sudo chown -R "$(whoami):$(whoami)" /opt/dental-lab-system
 git remote set-url origin https://github.com/Kadu207/Dental_lab.git
 git fetch origin
 git reset --hard origin/master
 git clean -fd
+```
 
+Script automatizado (recomendado):
+
+```bash
+cd /opt/dental-lab-system
+bash infra/ops/redeploy-vps.sh
+```
+
+Se o repositório estiver muito corrompido após um reset parcial, reclone preservando o `.env`:
+
+```bash
+sudo cp /opt/dental-lab-system/.env /tmp/dental-lab.env.backup
+sudo mv /opt/dental-lab-system /opt/dental-lab-system.broken.$(date +%Y%m%d)
+sudo git clone https://github.com/Kadu207/Dental_lab.git /opt/dental-lab-system
+sudo chown -R "$(whoami):$(whoami)" /opt/dental-lab-system
+cp /tmp/dental-lab.env.backup /opt/dental-lab-system/.env
+cd /opt/dental-lab-system
 docker compose -f docker-compose.prod.yml --env-file .env build --no-cache
 docker compose -f docker-compose.prod.yml --env-file .env up -d
-sleep 5
+```
+
+Build e health após checkout OK:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env build --no-cache
+docker compose -f docker-compose.prod.yml --env-file .env up -d
+sleep 8
 curl -s http://127.0.0.1:9180/api/health | python3 -m json.tool
 ```
+
+> **Atenção:** não rode `git clean -fd` se `git reset --hard` falhou — isso apaga arquivos novos e deixa o tree inconsistente. Sempre `chown` primeiro.
 
 > **Atenção:** `git reset --hard` apaga alterações locais no diretório do app. O `.env` não é versionado e permanece intacto.
 
@@ -115,7 +142,9 @@ curl -sv http://127.0.0.1:9180/api/health 2>&1 | head -30
 
 | Sintoma | Causa provável | Correção |
 |---------|----------------|----------|
-| `Expecting value: line 1 column 1` | `lab-api` reiniciando ou pull não aplicado | `git reset --hard origin/master` + rebuild; ver logs |
+| `unable to unlink ... Permission denied` | Arquivos owned by root | `sudo chown -R $(whoami):$(whoami) /opt/dental-lab-system` → reset de novo |
+| Build TS: `Cannot find module SupervisorTenants` | Reset parcial + `git clean` | `chown` + `git reset --hard origin/master` ou reclone |
+| `Expecting value: line 1 column 1` | `lab-api` reiniciando ou pull não aplicado | reset completo + rebuild; ver logs |
 | `Connection refused` | `lab-web` down | `docker compose ... up -d` |
 | HTML em vez de JSON | URL errada | Use `/api/health` |
 | `502 Bad Gateway` | API não responde na porta 3333 | Logs `lab-api`; conferir `schema-platform.sql` no image (commit recente) |
