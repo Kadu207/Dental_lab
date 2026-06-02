@@ -72,12 +72,24 @@ echo "==> Docker build + up"
 docker compose -f docker-compose.prod.yml --env-file .env build --no-cache
 docker compose -f docker-compose.prod.yml --env-file .env up -d
 
-echo "==> Health"
-sleep 8
-curl -fsS "http://127.0.0.1:9180/api/health" | python3 -m json.tool || {
-  echo "Health falhou — veja: docker compose -f docker-compose.prod.yml logs lab-api --tail 80"
+echo "==> Health (aguarda API subir — até ~45s)"
+HEALTH_URL="http://127.0.0.1:9180/api/health"
+health_ok=false
+for i in $(seq 1 15); do
+  if curl -fsS "$HEALTH_URL" 2>/dev/null | python3 -m json.tool; then
+    health_ok=true
+    break
+  fi
+  echo "   tentativa $i/15 — API ainda não respondeu..."
+  sleep 3
+done
+
+if [[ "$health_ok" != true ]]; then
+  echo "Health falhou após 15 tentativas — veja:"
+  docker compose -f docker-compose.prod.yml ps
+  docker compose -f docker-compose.prod.yml logs lab-api --tail 80
   exit 1
-}
+fi
 
 echo "==> OK — commit $(git rev-parse --short HEAD) em produção"
 echo "==> Opcional: bash infra/ops/install-backup-cron-vps.sh (backup Postgres diário)"

@@ -32,18 +32,18 @@ Backup **físico** (`pg_dump`) de todo o cluster — inclui `dental_lab`, `denta
 cd /opt/dental-lab-system
 chmod +x infra/ops/backup-postgres-vps.sh infra/ops/install-backup-cron-vps.sh
 
-# Teste manual
+# Teste manual (salva em backups/postgres/ — sem sudo)
 bash infra/ops/backup-postgres-vps.sh
-ls -lh /var/backups/dental-lab/postgres/
+ls -lh backups/postgres/
 
-# Cron diário 03:15 (servidor)
+# Cron diário 03:15 — log em logs/backup-postgres.log
 bash infra/ops/install-backup-cron-vps.sh
 ```
 
 Restore (somente teste/emergência):
 
 ```bash
-bash infra/ops/restore-postgres-vps.sh /var/backups/dental-lab/postgres/lab-pg-YYYYMMDD-HHMMSS.sql.gz
+bash infra/ops/restore-postgres-vps.sh backups/postgres/lab-pg-YYYYMMDD-HHMMSS.sql.gz
 ```
 
 Backup **lógico por tenant** (JSON): UI supervisor → Exportar, ou `infra/ops/backup-tenant-vps.sh`.

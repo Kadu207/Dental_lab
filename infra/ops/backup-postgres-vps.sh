@@ -4,13 +4,13 @@
 # Uso:
 #   cd /opt/dental-lab-system
 #   bash infra/ops/backup-postgres-vps.sh
-#   OUT_DIR=/var/backups/dental-lab RETENTION_DAYS=14 bash infra/ops/backup-postgres-vps.sh
+#   OUT_DIR=/opt/dental-lab-system/backups/postgres bash infra/ops/backup-postgres-vps.sh
 #
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/dental-lab-system}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
-OUT_DIR="${OUT_DIR:-/var/backups/dental-lab/postgres}"
+OUT_DIR="${OUT_DIR:-${APP_DIR}/backups/postgres}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 
 cd "$APP_DIR"

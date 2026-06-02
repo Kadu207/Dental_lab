@@ -85,7 +85,7 @@ bash infra/ops/backup-postgres-vps.sh          # teste manual
 bash infra/ops/install-backup-cron-vps.sh      # diário 03:15
 ```
 
-Arquivos em `/var/backups/dental-lab/postgres/` (retenção 14 dias). Ver [docs/POS-DEPLOY-VPS.md](./docs/POS-DEPLOY-VPS.md).
+Arquivos em `backups/postgres/` no app (ou `/var/backups/...` com sudo). Ver [docs/POS-DEPLOY-VPS.md](./docs/POS-DEPLOY-VPS.md).
 
 ### Backup manual (bash)
 docker compose -f docker-compose.standalone.yml exec -T lab-postgres \
