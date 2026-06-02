@@ -32,12 +32,19 @@ if [[ -z "$NEW_PASS" ]]; then
   exit 1
 fi
 
+# Escape aspas simples para literal SQL ('' dentro de '...')
+escape_sql_literal() {
+  printf '%s' "$1" | sed "s/'/''/g"
+}
+
+ESCAPED_PASS="$(escape_sql_literal "$NEW_PASS")"
+
 echo "==> Alterando senha do usuário Postgres '$POSTGRES_USER' para coincidir com .env"
 echo "    (conexão local dentro do container — não usa a senha antiga do .env)"
 
 docker compose -f "$COMPOSE_FILE" --env-file .env exec -T lab-postgres \
   psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 \
-  -c "ALTER USER ${POSTGRES_USER} WITH PASSWORD \$${NEW_PASS}\$\$;"
+  -c "ALTER USER ${POSTGRES_USER} WITH PASSWORD '${ESCAPED_PASS}';"
 
 echo "==> Reiniciando lab-api"
 docker compose -f "$COMPOSE_FILE" --env-file .env restart lab-api
