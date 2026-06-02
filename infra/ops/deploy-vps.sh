@@ -13,7 +13,19 @@ if [[ ! -f "$APP_DIR/.env" ]]; then
 fi
 
 cd "$APP_DIR"
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+if [[ -d .git ]]; then
+  git remote set-url origin https://github.com/Kadu207/Dental_lab.git 2>/dev/null || true
+  git fetch origin
+  if ! git pull origin master 2>/dev/null; then
+    echo "==> Conflito local — reset para origin/master (preserva .env)"
+    git reset --hard origin/master
+    git clean -fd
+  fi
+fi
+
+docker compose -f docker-compose.prod.yml --env-file .env build --no-cache
+docker compose -f docker-compose.prod.yml --env-file .env up -d
 
 echo "==> Health local (via nginx interno do container)"
 sleep 5

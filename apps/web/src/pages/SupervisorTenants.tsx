@@ -1,7 +1,8 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { api, type TenantLicenseRow, type TenantLicenseStatus, type TenantRecord } from "../api";
 import { Modal } from "../components";
+import { downloadWithAuth } from "../lib/downloadWithAuth";
 import { useSession } from "../lib/SessionContext";
 
 const GERADOR_URL = "https://licencas.inovatitech.com.br";
@@ -46,6 +47,11 @@ export default function SupervisorTenantsPage() {
   const [licProduto, setLicProduto] = useState("lab");
   const [licPeriodo, setLicPeriodo] = useState("1y");
   const [licNotes, setLicNotes] = useState("");
+
+  const [backupReplace, setBackupReplace] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const importNewFileRef = useRef<HTMLInputElement>(null);
 
   const refreshTenants = () =>
     api.supervisor
@@ -171,6 +177,76 @@ export default function SupervisorTenantsPage() {
     }
   }
 
+  async function exportBackup() {
+    if (!selected) return;
+    setBackupBusy(true);
+    setErro("");
+    try {
+      await downloadWithAuth(api.supervisor.exportBackupUrl(selected.clinicaId), {
+        filename: `dental-lab-tenant-${selected.clinicaId}.json`,
+      });
+      setMsg(`Backup do tenant #${selected.clinicaId} exportado.`);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao exportar backup");
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function readBundleFile(file: File): Promise<unknown> {
+    const text = await file.text();
+    return JSON.parse(text) as unknown;
+  }
+
+  async function importBackupToSelected(file: File) {
+    if (!selected) return;
+    if (
+      backupReplace &&
+      !window.confirm(
+        `Substituir todos os dados do tenant #${selected.clinicaId}? Esta ação apaga o conteúdo atual do schema.`,
+      )
+    ) {
+      return;
+    }
+    setBackupBusy(true);
+    setErro("");
+    try {
+      const bundle = await readBundleFile(file);
+      const result = await api.supervisor.importBackup(selected.clinicaId, bundle, backupReplace);
+      setMsg(`${result.msg} — ${result.importedRows} linhas importadas.`);
+      await loadTenantDetails(selected);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao importar backup");
+    } finally {
+      setBackupBusy(false);
+      if (importFileRef.current) importFileRef.current.value = "";
+    }
+  }
+
+  async function importBackupAsNewTenant(file: File) {
+    if (
+      !window.confirm(
+        "Criar um novo tenant e importar o backup? Os dados serão gravados em um schema lab_tN novo.",
+      )
+    ) {
+      return;
+    }
+    setBackupBusy(true);
+    setErro("");
+    try {
+      const bundle = await readBundleFile(file);
+      const result = await api.supervisor.importBackupNewTenant(bundle);
+      setMsg(`${result.msg} — tenant #${result.tenant.clinicaId} (${result.tenant.postgresSchema}).`);
+      await refreshTenants();
+      await loadTenantDetails(result.tenant);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao importar para novo tenant");
+    } finally {
+      setBackupBusy(false);
+      if (importNewFileRef.current) importNewFileRef.current.value = "";
+    }
+  }
+
   const remote = licStatus?.remoteStatus;
   const local = licStatus?.localStatus;
 
@@ -182,9 +258,25 @@ export default function SupervisorTenantsPage() {
     <>
       <div className="page-header">
         <h2>Supervisor · Empresas (tenants)</h2>
-        <button type="button" className="btn btn-primary" onClick={openCreate}>
-          Nova empresa
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" className="btn btn-primary" onClick={openCreate}>
+            Nova empresa
+          </button>
+          <label className="btn btn-outline" style={{ cursor: backupBusy ? "wait" : "pointer" }}>
+            Importar backup → novo tenant
+            <input
+              ref={importNewFileRef}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              disabled={backupBusy}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void importBackupAsNewTenant(f);
+              }}
+            />
+          </label>
+        </div>
       </div>
 
       <p className="page-desc">
@@ -281,13 +373,71 @@ export default function SupervisorTenantsPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
               <button type="button" className="btn btn-primary btn-sm" onClick={() => setModal("license")}>
                 Gerar chave (tenant)
               </button>
               <button type="button" className="btn btn-outline btn-sm" onClick={() => loadTenantDetails(selected)}>
                 Atualizar
               </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                disabled={backupBusy}
+                onClick={() => {
+                  setBackupBusy(true);
+                  api.supervisor
+                    .syncTenantLicense(selected.clinicaId)
+                    .then((r) => setMsg(`${r.msg} (Gerador → tenant #${selected.clinicaId})`))
+                    .catch((e) => setErro(e instanceof Error ? e.message : "Falha ao sincronizar"))
+                    .finally(() => {
+                      setBackupBusy(false);
+                      void loadTenantDetails(selected);
+                    });
+                }}
+              >
+                Sync Gerador
+              </button>
+            </div>
+
+            <div className="card" style={{ marginBottom: 16, padding: 12 }}>
+              <h4 style={{ marginBottom: 8 }}>Backup lógico (por clinica_id)</h4>
+              <p className="muted" style={{ marginBottom: 10 }}>
+                Exporta/importa JSON com clientes, próteses, estoque, usuários e licenças do schema. Use{" "}
+                <strong>substituir</strong> para migração completa; sem marcar, linhas conflitantes são ignoradas.
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  disabled={backupBusy}
+                  onClick={() => void exportBackup()}
+                >
+                  Exportar JSON
+                </button>
+                <label className="btn btn-outline btn-sm" style={{ cursor: backupBusy ? "wait" : "pointer" }}>
+                  Importar no tenant
+                  <input
+                    ref={importFileRef}
+                    type="file"
+                    accept="application/json,.json"
+                    hidden
+                    disabled={backupBusy}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void importBackupToSelected(f);
+                    }}
+                  />
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.9rem" }}>
+                  <input
+                    type="checkbox"
+                    checked={backupReplace}
+                    onChange={(e) => setBackupReplace(e.target.checked)}
+                  />
+                  Substituir dados existentes
+                </label>
+              </div>
             </div>
 
             <h4 style={{ marginBottom: 8 }}>Chaves no schema ({licenses.length})</h4>

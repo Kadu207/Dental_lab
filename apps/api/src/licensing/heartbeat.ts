@@ -1,27 +1,17 @@
-import { listLicenses } from "./service.js";
-import { isRemoteLicenseEnabled, remoteLicenseHeartbeat } from "./remote-client.js";
+import { isRemoteLicenseEnabled } from "./remote-client.js";
+import { syncAllTenantLicensesFromRemote } from "./tenant-sync.js";
 
 const HEARTBEAT_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 async function runHeartbeatCycle(): Promise<void> {
   if (!isRemoteLicenseEnabled()) return;
 
-  const rows = await listLicenses(500);
-  const active = rows.filter((row) => row.status === "active" && row.license_key);
-
-  for (const lic of active) {
-    try {
-      const hb = await remoteLicenseHeartbeat(lic.license_key);
-      if (hb.blocked) {
-        console.warn(
-          `[license-heartbeat] Licença bloqueada (clinica=${lic.clinica_id}, key=****${lic.license_key.slice(-4)})`,
-        );
-      }
-    } catch (err) {
-      console.warn(
-        `[license-heartbeat] Falha clinica=${lic.clinica_id}:`,
-        err instanceof Error ? err.message : err,
-      );
+  const results = await syncAllTenantLicensesFromRemote();
+  for (const r of results) {
+    if (r.error) {
+      console.warn(`[license-sync] clinica=${r.clinicaId}: ${r.error}`);
+    } else if (r.licensesUpdated > 0) {
+      console.log(`[license-sync] clinica=${r.clinicaId}: ${r.licensesUpdated} licença(s) atualizada(s)`);
     }
   }
 }
@@ -34,5 +24,5 @@ export function startLicenseHeartbeat(): void {
     void runHeartbeatCycle();
   }, HEARTBEAT_INTERVAL_MS);
 
-  console.log("[license-heartbeat] Poll remoto a cada 6h ativo");
+  console.log("[license-sync] Poll Gerador a cada 6h ativo (tenants + heartbeat por chave)");
 }

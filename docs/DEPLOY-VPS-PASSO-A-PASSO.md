@@ -84,6 +84,49 @@ docker compose -f docker-compose.prod.yml --env-file .env build
 docker compose -f docker-compose.prod.yml --env-file .env up -d
 ```
 
+**Atualizar código na VPS (após push no GitHub):**
+
+O remote `dental_lab` existe só na sua máquina de desenvolvimento. Na VPS use `origin`.
+
+Se `git pull` falhar com *local changes would be overwritten*, a VPS tem edições manuais antigas. **Descarte-as** e alinhe ao GitHub (não há commits locais importantes na VPS):
+
+```bash
+cd /opt/dental-lab-system
+git remote set-url origin https://github.com/Kadu207/Dental_lab.git
+git fetch origin
+git reset --hard origin/master
+git clean -fd
+
+docker compose -f docker-compose.prod.yml --env-file .env build --no-cache
+docker compose -f docker-compose.prod.yml --env-file .env up -d
+sleep 5
+curl -s http://127.0.0.1:9180/api/health | python3 -m json.tool
+```
+
+> **Atenção:** `git reset --hard` apaga alterações locais no diretório do app. O `.env` não é versionado e permanece intacto.
+
+**Se `curl /api/health` retornar vazio ou erro JSON:**
+
+```bash
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs lab-api --tail 80
+curl -sv http://127.0.0.1:9180/api/health 2>&1 | head -30
+```
+
+| Sintoma | Causa provável | Correção |
+|---------|----------------|----------|
+| `Expecting value: line 1 column 1` | `lab-api` reiniciando ou pull não aplicado | `git reset --hard origin/master` + rebuild; ver logs |
+| `Connection refused` | `lab-web` down | `docker compose ... up -d` |
+| HTML em vez de JSON | URL errada | Use `/api/health` |
+| `502 Bad Gateway` | API não responde na porta 3333 | Logs `lab-api`; conferir `schema-platform.sql` no image (commit recente) |
+
+Ou use o script: `bash infra/ops/deploy-vps.sh` (faz pull + rebuild quando não há conflito).
+
+**Backup lógico por tenant (supervisor):**
+
+- UI: `/supervisor/tenants` → selecionar tenant → Exportar / Importar JSON
+- CLI na VPS: `bash infra/ops/backup-tenant-vps.sh <clinica_id>` (requer `DENTAL_LAB_SUPERVISOR_TOKEN`)
+
 **`Defina DENTAL_LAB_JWT_SECRET` / `DENTAL_LAB_LICENSE_SERVER_API_KEY`**
 ```bash
 openssl rand -hex 32   # JWT

@@ -243,6 +243,25 @@ export const api = {
         method: "PUT",
         body: JSON.stringify({ senhaAtual, novaSenha }),
       }),
+    exportBackupUrl: (clinicaId: number) => `${BASE}/supervisor/tenants/${clinicaId}/backup/export`,
+    importBackup: (clinicaId: number, bundle: unknown, replace: boolean) =>
+      request<{ msg: string; clinicaId: number; postgresSchema: string; importedRows: number }>(
+        `/supervisor/tenants/${clinicaId}/backup/import`,
+        { method: "POST", body: JSON.stringify({ bundle, replace }) },
+      ),
+    importBackupNewTenant: (bundle: unknown, meta?: Partial<TenantRecord>) =>
+      request<{ msg: string; tenant: TenantRecord; importedRows: number }>("/supervisor/backup/import", {
+        method: "POST",
+        body: JSON.stringify({ bundle, ...meta }),
+      }),
+    syncAllLicenses: () =>
+      request<{ msg: string; synced: number; results: unknown[] }>("/supervisor/tenants/sync-licencas", {
+        method: "POST",
+      }),
+    syncTenantLicense: (clinicaId: number) =>
+      request<{ msg: string; result: unknown }>(`/supervisor/tenants/${clinicaId}/sync-licenca`, {
+        method: "POST",
+      }),
   },
 };
 

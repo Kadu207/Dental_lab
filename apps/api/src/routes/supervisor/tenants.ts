@@ -10,6 +10,7 @@ import { isRemoteLicenseEnabled, remoteLicenseStatus } from "../../licensing/rem
 import { requireSupervisor } from "../../auth/rbac.js";
 import { withLabClient } from "../../db/client.js";
 import { createTenant, getTenant, listTenants, updateTenant } from "../../tenants/registry.js";
+import { syncAllTenantLicensesFromRemote, syncTenantLicenseFromRemote } from "../../licensing/tenant-sync.js";
 
 export const supervisorTenantsRouter = Router();
 
@@ -152,6 +153,34 @@ supervisorTenantsRouter.post("/:clinicaId/licencas/gerar", async (req, res) => {
     res.status(201).json(serializeLicenseRow(row));
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao gerar licença" });
+  }
+});
+
+supervisorTenantsRouter.post("/sync-licencas", async (_req, res) => {
+  try {
+    const results = await syncAllTenantLicensesFromRemote();
+    res.json({
+      msg: "Sincronização concluída",
+      synced: results.length,
+      results,
+    });
+  } catch (e) {
+    res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao sincronizar licenças" });
+  }
+});
+
+supervisorTenantsRouter.post("/:clinicaId/sync-licenca", async (req, res) => {
+  const clinicaId = Number(req.params.clinicaId);
+  if (!Number.isFinite(clinicaId) || clinicaId <= 0) {
+    return res.status(400).json({ erro: "clinicaId inválido" });
+  }
+  try {
+    const tenant = await getTenant(clinicaId);
+    if (!tenant) return res.status(404).json({ erro: "Tenant não encontrado" });
+    const result = await syncTenantLicenseFromRemote(clinicaId);
+    res.json({ msg: "Sincronização concluída", result });
+  } catch (e) {
+    res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao sincronizar licença" });
   }
 });
 

@@ -24,11 +24,11 @@
 
 ## Fase 3 — Backup/Import
 
-- [ ] T030 Export lógico por `clinica_id`
-- [ ] T031 Import para schema existente ou novo tenant
-- [ ] T032 Scripts ops VPS
+- [x] T030 Export lógico por `clinica_id`
+- [x] T031 Import para schema existente ou novo tenant
+- [x] T032 Scripts ops VPS
 
 ## Fase 4 — License write-guard
 
-- [ ] T040 Bloqueio writes com licença expirada
-- [ ] T041 Sync status Gerador → tenants
+- [x] T040 Bloqueio writes com licença expirada
+- [x] T041 Sync status Gerador → tenants
