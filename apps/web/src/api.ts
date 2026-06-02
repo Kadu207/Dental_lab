@@ -236,11 +236,19 @@ export const api = {
   },
   supervisor: {
     listTenants: () => request<TenantRecord[]>("/supervisor/tenants"),
+    listTenantsOverview: () => request<TenantOverview[]>("/supervisor/tenants/overview"),
     getTenant: (clinicaId: number) => request<TenantRecord>(`/supervisor/tenants/${clinicaId}`),
     createTenant: (data: Partial<TenantRecord>) =>
       request<TenantRecord>("/supervisor/tenants", { method: "POST", body: JSON.stringify(data) }),
     updateTenant: (clinicaId: number, data: Partial<TenantRecord>) =>
       request<TenantRecord>(`/supervisor/tenants/${clinicaId}`, { method: "PUT", body: JSON.stringify(data) }),
+    deleteTenant: (clinicaId: number) =>
+      request<{ msg: string }>(`/supervisor/tenants/${clinicaId}`, { method: "DELETE" }),
+    bulkTenantStatus: (clinicaIds: number[], status: "active" | "suspended") =>
+      request<{ msg: string; updated: number }>("/supervisor/tenants/bulk-status", {
+        method: "POST",
+        body: JSON.stringify({ clinicaIds, status }),
+      }),
     licenseStatus: (clinicaId: number) =>
       request<TenantLicenseStatus>(`/supervisor/tenants/${clinicaId}/licenca/status`),
     listLicenses: (clinicaId: number) => request<TenantLicenseRow[]>(`/supervisor/tenants/${clinicaId}/licencas`),
@@ -519,10 +527,40 @@ export interface TenantRecord {
   nomeFantasia: string | null;
   razaoSocial: string | null;
   cnpj: string | null;
+  cpf: string | null;
+  inscricaoEstadual: string | null;
+  inscricaoMunicipal: string | null;
+  cep: string | null;
+  endereco: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
+  telefone1: string | null;
+  telefone2: string | null;
+  whatsapp: string | null;
+  email1: string | null;
+  email2: string | null;
+  responsavelNome: string | null;
+  responsavelContato: string | null;
+  responsavelWhatsapp: string | null;
+  responsavelEmail: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  excellenceClinicaId: number | null;
   clienteCodigo: string | null;
   status: "active" | "suspended" | "provisioning";
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TenantOverview extends TenantRecord {
+  licenseStatus: string;
+  licenseStatusLabel: string;
+  licenseProduto: string | null;
+  licensePeriodo: string | null;
+  licenseDaysLeft: number | null;
 }
 
 export interface TenantLicenseRow {

@@ -9,12 +9,48 @@ import { buildStatusWithTrial } from "../../licensing/service.js";
 import { isRemoteLicenseEnabled, remoteLicenseStatus } from "../../licensing/remote-client.js";
 import { requireSupervisor } from "../../auth/rbac.js";
 import { withLabClient } from "../../db/client.js";
-import { createTenant, getTenant, listTenants, updateTenant } from "../../tenants/registry.js";
+import { createTenant, deleteTenant, getTenant, listTenants, setTenantsStatus, updateTenant } from "../../tenants/registry.js";
+import { parseTenantPayload } from "../../tenants/tenant-fields.js";
+import { listTenantsOverview } from "../../tenants/tenant-overview.js";
 import { syncAllTenantLicensesFromRemote, syncTenantLicenseFromRemote } from "../../licensing/tenant-sync.js";
 
 export const supervisorTenantsRouter = Router();
 
 supervisorTenantsRouter.use(requireSupervisor());
+
+supervisorTenantsRouter.get("/overview", async (_req, res) => {
+  try {
+    const rows = await listTenantsOverview();
+    res.json(rows);
+  } catch (e) {
+    res.status(503).json({
+      erro: e instanceof Error ? e.message : "Falha ao listar empresas",
+      code: "TENANT_REGISTRY_UNAVAILABLE",
+    });
+  }
+});
+
+supervisorTenantsRouter.post("/bulk-status", async (req, res) => {
+  const clinicaIds = Array.isArray(req.body?.clinicaIds)
+    ? (req.body.clinicaIds as unknown[]).map(Number).filter((n) => Number.isFinite(n) && n > 0)
+    : [];
+  const status = req.body?.status;
+  if (clinicaIds.length === 0) {
+    return res.status(400).json({ erro: "Informe clinicaIds" });
+  }
+  if (status !== "active" && status !== "suspended") {
+    return res.status(400).json({ erro: "status deve ser active ou suspended" });
+  }
+  if (clinicaIds.includes(1) && status === "suspended") {
+    return res.status(400).json({ erro: "Não é permitido suspender o tenant padrão (#1)" });
+  }
+  try {
+    const updated = await setTenantsStatus(clinicaIds, status);
+    res.json({ msg: `${updated} empresa(s) atualizada(s)`, updated });
+  } catch (e) {
+    res.status(500).json({ erro: e instanceof Error ? e.message : "Falha na operação em lote" });
+  }
+});
 
 supervisorTenantsRouter.get("/", async (_req, res) => {
   try {
@@ -46,24 +82,14 @@ supervisorTenantsRouter.get("/:clinicaId", async (req, res) => {
 });
 
 supervisorTenantsRouter.post("/", async (req, res) => {
-  const { nomeFantasia, razaoSocial, cnpj, clienteCodigo } = req.body as {
-    nomeFantasia?: string;
-    razaoSocial?: string;
-    cnpj?: string;
-    clienteCodigo?: string;
-  };
+  const payload = parseTenantPayload(req.body as Record<string, unknown>);
 
-  if (!razaoSocial?.trim() && !nomeFantasia?.trim()) {
+  if (!payload.razaoSocial && !payload.nomeFantasia) {
     return res.status(400).json({ erro: "Informe razaoSocial ou nomeFantasia" });
   }
 
   try {
-    const created = await createTenant({
-      nomeFantasia: nomeFantasia?.trim(),
-      razaoSocial: razaoSocial?.trim(),
-      cnpj: cnpj?.trim(),
-      clienteCodigo: clienteCodigo?.trim(),
-    });
+    const created = await createTenant(payload);
     res.status(201).json(created);
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao criar tenant" });
@@ -150,7 +176,7 @@ supervisorTenantsRouter.post("/:clinicaId/licencas/gerar", async (req, res) => {
         createdBy: req.auth?.sub ?? "supervisor",
       }),
     );
-    res.status(201).json(serializeLicenseRow(row));
+    res.status(201).json(serializeLicenseRow(row, tenant));
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao gerar licença" });
   }
@@ -190,29 +216,36 @@ supervisorTenantsRouter.put("/:clinicaId", async (req, res) => {
     return res.status(400).json({ erro: "clinicaId inválido" });
   }
 
-  const { nomeFantasia, razaoSocial, cnpj, clienteCodigo, status } = req.body as {
-    nomeFantasia?: string | null;
-    razaoSocial?: string | null;
-    cnpj?: string | null;
-    clienteCodigo?: string | null;
-    status?: "active" | "suspended" | "provisioning";
-  };
+  const payload = parseTenantPayload(req.body as Record<string, unknown>);
 
-  if (clinicaId === 1 && status === "suspended") {
+  if (clinicaId === 1 && payload.status === "suspended") {
     return res.status(400).json({ erro: "Não é permitido suspender o tenant padrão" });
   }
 
   try {
-    const updated = await updateTenant(clinicaId, {
-      nomeFantasia,
-      razaoSocial,
-      cnpj,
-      clienteCodigo,
-      status,
-    });
+    const current = await getTenant(clinicaId);
+    if (!current) return res.status(404).json({ erro: "Tenant não encontrado" });
+
+    const merged = { ...current, ...payload };
+    const updated = await updateTenant(clinicaId, merged);
     if (!updated) return res.status(404).json({ erro: "Tenant não encontrado" });
     res.json(updated);
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao atualizar tenant" });
+  }
+});
+
+supervisorTenantsRouter.delete("/:clinicaId", async (req, res) => {
+  const clinicaId = Number(req.params.clinicaId);
+  if (!Number.isFinite(clinicaId) || clinicaId <= 0) {
+    return res.status(400).json({ erro: "clinicaId inválido" });
+  }
+  try {
+    const ok = await deleteTenant(clinicaId);
+    if (!ok) return res.status(404).json({ erro: "Tenant não encontrado" });
+    res.json({ msg: `Empresa #${clinicaId} removida do cadastro` });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Falha ao remover tenant";
+    res.status(msg.includes("padrão") ? 400 : 500).json({ erro: msg });
   }
 });

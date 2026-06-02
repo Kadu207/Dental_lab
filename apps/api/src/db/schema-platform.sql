@@ -40,3 +40,30 @@ CREATE TABLE IF NOT EXISTS dental_lab_platform.tenant_backup_log (
 
 CREATE INDEX IF NOT EXISTS idx_tenant_backup_log_clinica ON dental_lab_platform.tenant_backup_log (clinica_id);
 CREATE INDEX IF NOT EXISTS idx_tenant_backup_log_created ON dental_lab_platform.tenant_backup_log (created_at DESC);
+
+-- Cadastro completo de empresas (supervisor)
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS cpf TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS inscricao_estadual TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS inscricao_municipal TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS cep TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS endereco TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS numero TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS complemento TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS bairro TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS cidade TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS uf TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS telefone1 TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS telefone2 TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS whatsapp TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS email1 TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS email2 TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS responsavel_nome TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS responsavel_contato TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS responsavel_whatsapp TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS responsavel_email TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS instagram TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS facebook TEXT;
+ALTER TABLE dental_lab_platform.tenants ADD COLUMN IF NOT EXISTS excellence_clinica_id INTEGER;
+
+CREATE INDEX IF NOT EXISTS idx_tenants_excellence_clinica ON dental_lab_platform.tenants (excellence_clinica_id)
+  WHERE excellence_clinica_id IS NOT NULL;

@@ -26,6 +26,7 @@ import FinanceiroPage from "./pages/Financeiro";
 import ProcedimentosPage from "./pages/Procedimentos";
 import GruposPage from "./pages/Grupos";
 import EtiquetasPage from "./pages/Etiquetas";
+import SupervisorCadastroPage from "./pages/SupervisorCadastro";
 import SupervisorTenantsPage from "./pages/SupervisorTenants";
 import SupervisorBackupPage from "./pages/SupervisorBackup";
 import SupervisorImportPage from "./pages/SupervisorImport";
@@ -105,6 +106,9 @@ function AppShell() {
           {isSupervisor ? (
             <div>
               <div className="nav-section">Suporte (MASTER)</div>
+              <NavLink to="/supervisor/cadastro" className={({ isActive }) => (isActive ? "active" : "")}>
+                Cadastro de clientes
+              </NavLink>
               <NavLink to="/supervisor/tenants" className={({ isActive }) => (isActive ? "active" : "")}>
                 Gerador de licenças
               </NavLink>
@@ -166,6 +170,7 @@ function AppShell() {
             path="/"
             element={isSupervisor ? <Navigate to="/supervisor/tenants" replace /> : <Dashboard />}
           />
+          <Route path="/supervisor/cadastro" element={<SupervisorCadastroPage />} />
           <Route path="/supervisor/tenants" element={<SupervisorTenantsPage />} />
           <Route path="/supervisor/backup" element={<SupervisorBackupPage />} />
           <Route path="/supervisor/import" element={<SupervisorImportPage />} />
