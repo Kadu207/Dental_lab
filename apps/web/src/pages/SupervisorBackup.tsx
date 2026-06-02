@@ -1,6 +1,9 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { api, type TenantBackupLogRecord, type TenantRecord } from "../api";
+import { ActionButton } from "../components/ui/ActionButton";
+import { IconDatabase, IconDownload, IconPlus } from "../components/ui/Icons";
+import { PageHeader } from "../components/ui/PageHeader";
 import { downloadWithAuth } from "../lib/downloadWithAuth";
 import { useSession } from "../lib/SessionContext";
 
@@ -84,13 +87,11 @@ export default function SupervisorBackupPage() {
 
   return (
     <>
-      <div className="page-header">
-        <h2>Backup de empresas</h2>
-      </div>
-      <p className="page-desc">
-        Gera backup lógico JSON por empresa (<code>clinica_id</code>): pacientes, próteses, estoque, usuários e
-        licenças do schema Postgres. Use em migrações, cópia para outro tenant ou arquivo antes de manutenção.
-      </p>
+      <PageHeader
+        title="Backup de empresas"
+        subtitle="Gera backup lógico JSON por empresa (clinica_id): pacientes, próteses, estoque, usuários e licenças do schema Postgres."
+        icon={<IconDatabase size={22} />}
+      />
 
       {msg ? <div className="alert alert-success">{msg}</div> : null}
       {erro ? <div className="alert alert-error">{erro}</div> : null}
@@ -135,9 +136,14 @@ export default function SupervisorBackupPage() {
             />
           </div>
           <div className="form-actions full">
-            <button type="submit" className="btn btn-primary" disabled={loading || !clinicaId}>
-              {loading ? "Gerando…" : "+ Gerar backup JSON"}
-            </button>
+            <ActionButton
+              type="submit"
+              variant="primary"
+              icon={<IconPlus size={16} />}
+              disabled={loading || !clinicaId}
+            >
+              {loading ? "Gerando…" : "Gerar backup JSON"}
+            </ActionButton>
           </div>
         </form>
       </div>
@@ -176,9 +182,14 @@ export default function SupervisorBackupPage() {
                     </td>
                     <td className="muted">{r.notes || "—"}</td>
                     <td>
-                      <button type="button" className="btn btn-outline btn-sm" onClick={() => void baixarNovamente(r)}>
+                      <ActionButton
+                        variant="outline"
+                        size="sm"
+                        icon={<IconDownload size={14} />}
+                        onClick={() => void baixarNovamente(r)}
+                      >
                         Baixar
-                      </button>
+                      </ActionButton>
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,18 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Navigate, NavLink } from "react-router-dom";
 import { api, type TenantOverview, type TenantRecord } from "../api";
+import { ActionButton } from "../components/ui/ActionButton";
+import {
+  IconCheck,
+  IconEdit,
+  IconKey,
+  IconPause,
+  IconPlus,
+  IconSave,
+  IconTrash,
+  IconUsers,
+} from "../components/ui/Icons";
+import { PageHeader } from "../components/ui/PageHeader";
 import { applyMask, type MaskKind } from "../lib/inputMasks";
 import { licenseStatusClass } from "../lib/licenseCatalog";
 import { fetchViaCep } from "../lib/viacep";
@@ -265,50 +277,51 @@ export default function SupervisorCadastroPage() {
 
   return (
     <>
-      <div className="page-header">
-        <h2>Cadastro de clientes</h2>
-        <div className="actions">
-          <button type="button" className="btn btn-primary" onClick={novo}>
+      <PageHeader
+        title="Cadastro de clientes"
+        subtitle="Cada empresa recebe um ID Lab único (clinica_id) e schema Postgres dedicado. Vincule o ID Excellence Dental Cloud quando o cliente já usa o ERP."
+        icon={<IconUsers size={22} />}
+        actions={
+          <ActionButton variant="primary" icon={<IconPlus size={16} />} onClick={novo}>
             Nova empresa
-          </button>
-        </div>
-      </div>
-      <p className="page-desc">
-        Cada empresa recebe um <strong>ID Lab único</strong> (<code>clinica_id</code>) e schema Postgres dedicado.
-        Vincule o <strong>ID Excellence Dental Cloud</strong> quando o cliente já usa o ERP.
-      </p>
+          </ActionButton>
+        }
+      />
 
       {msg ? <div className="alert alert-success">{msg}</div> : null}
       {erro ? <div className="alert alert-error">{erro}</div> : null}
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="cadastro-toolbar">
-          <h3>Clientes provisionados ({rows.length})</h3>
+          <h3 className="card-title">Clientes provisionados ({rows.length})</h3>
           <div className="cadastro-bulk-actions">
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
+            <ActionButton
+              variant="outline"
+              size="sm"
+              icon={<IconCheck size={14} />}
               disabled={selectedIds.length === 0}
               onClick={() => void ativar(selectedIds)}
             >
               Ativar selecionados
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline btn-sm btn-warn"
+            </ActionButton>
+            <ActionButton
+              variant="warning"
+              size="sm"
+              icon={<IconPause size={14} />}
               disabled={selectedIds.length === 0}
               onClick={() => void suspender(selectedIds)}
             >
               Suspender selecionados
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline btn-sm btn-danger"
+            </ActionButton>
+            <ActionButton
+              variant="danger"
+              size="sm"
+              icon={<IconTrash size={14} />}
               disabled={selectedIds.length === 0}
               onClick={() => void remover(selectedIds)}
             >
               Remover selecionados
-            </button>
+            </ActionButton>
           </div>
         </div>
 
@@ -373,42 +386,44 @@ export default function SupervisorCadastroPage() {
                     </td>
                     <td>
                       <div className="license-actions">
-                        <button type="button" className="btn btn-outline btn-sm" onClick={() => editar(r)}>
+                        <ActionButton variant="outline" size="sm" icon={<IconEdit size={14} />} onClick={() => editar(r)}>
                           Editar
-                        </button>
+                        </ActionButton>
                         {r.status !== "active" ? (
-                          <button
-                            type="button"
-                            className="btn btn-outline btn-sm"
+                          <ActionButton
+                            variant="outline"
+                            size="sm"
+                            icon={<IconCheck size={14} />}
                             onClick={() => void ativar([r.clinicaId])}
                           >
                             Ativar
-                          </button>
+                          </ActionButton>
                         ) : (
-                          <button
-                            type="button"
-                            className="btn btn-outline btn-sm btn-warn"
+                          <ActionButton
+                            variant="warning"
+                            size="sm"
+                            icon={<IconPause size={14} />}
                             disabled={r.clinicaId === 1}
                             onClick={() => void suspender([r.clinicaId])}
                           >
                             Suspender
-                          </button>
+                          </ActionButton>
                         )}
-                        <NavLink
-                          to="/supervisor/tenants"
-                          className="btn btn-outline btn-sm"
-                          title="Gerar licença"
-                        >
+                        <NavLink to="/supervisor/tenants" className="btn btn-outline btn-sm btn-with-icon" title="Gerar licença">
+                          <span className="btn-icon" aria-hidden>
+                            <IconKey size={14} />
+                          </span>
                           Licença
                         </NavLink>
                         {r.clinicaId > 1 ? (
-                          <button
-                            type="button"
-                            className="btn btn-outline btn-sm btn-danger"
+                          <ActionButton
+                            variant="danger"
+                            size="sm"
+                            icon={<IconTrash size={14} />}
                             onClick={() => void remover([r.clinicaId])}
                           >
                             Remover
-                          </button>
+                          </ActionButton>
                         ) : null}
                       </div>
                     </td>
@@ -421,11 +436,11 @@ export default function SupervisorCadastroPage() {
       </div>
 
       <div className="card">
-        <h3 style={{ marginBottom: 12 }}>
+        <h3 className="card-title">
           {editingId ? `Editar empresa #${editingId}` : "Nova empresa"}
           {editingId ? (
-            <span className="muted" style={{ fontWeight: 400, fontSize: "0.9rem", marginLeft: 8 }}>
-              ID Lab único — não alterável
+            <span className="muted" style={{ fontWeight: 400, fontSize: "0.85rem", marginLeft: 8 }}>
+              · ID Lab fixo
             </span>
           ) : null}
         </h3>
@@ -451,12 +466,17 @@ export default function SupervisorCadastroPage() {
             </div>
           ))}
           <div className="form-actions full">
-            <button type="button" className="btn btn-outline" onClick={novo}>
+            <ActionButton variant="ghost" type="button" onClick={novo}>
               Limpar
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
+            </ActionButton>
+            <ActionButton
+              variant={editingId ? "primary" : "purple"}
+              type="submit"
+              icon={<IconSave size={16} />}
+              disabled={loading}
+            >
               {loading ? "Salvando…" : editingId ? "Salvar alterações" : "Cadastrar empresa"}
-            </button>
+            </ActionButton>
           </div>
         </form>
       </div>

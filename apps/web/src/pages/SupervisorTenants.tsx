@@ -2,6 +2,9 @@ import { FormEvent, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { api, type TenantLicenseRow, type TenantRecord } from "../api";
 import { Modal } from "../components";
+import { ActionButton } from "../components/ui/ActionButton";
+import { IconBan, IconCopy, IconEdit, IconKey, IconPlus, IconTrash } from "../components/ui/Icons";
+import { PageHeader } from "../components/ui/PageHeader";
 import {
   GERADOR_URL,
   LICENSE_PERIODOS,
@@ -199,17 +202,14 @@ export default function SupervisorTenantsPage() {
 
   return (
     <>
-      <div className="page-header">
-        <h2>
-          <span className="gerador-icon" aria-hidden>
-            🔑
-          </span>{" "}
-          Gerador de licenças
-        </h2>
-      </div>
+      <PageHeader
+        title="Gerador de licenças"
+        subtitle="Ferramenta exclusiva da equipe de suporte/comercial. Vincule clinica_id e cliente_codigo (ED-*) do tenant provisionado."
+        icon={<IconKey size={22} />}
+      />
+
       <p className="page-desc">
-        Ferramenta exclusiva da equipe de suporte/comercial. Vincule sempre ao <code>clinica_id</code> e{" "}
-        <code>cliente_codigo</code> (ED-*) do tenant provisionado. Billing comercial (Stripe, revogação remota) no{" "}
+        Billing comercial (Stripe, revogação remota) no{" "}
         <a href={GERADOR_URL} target="_blank" rel="noreferrer">
           Gerador Inova
         </a>
@@ -308,9 +308,15 @@ export default function SupervisorTenantsPage() {
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
           </div>
           <div className="form-actions full">
-            <button type="submit" className="btn btn-primary btn-gerar" disabled={loading || !tenantMode}>
-              {loading ? "Gerando…" : "+ Gerar licença"}
-            </button>
+            <ActionButton
+              type="submit"
+              variant="purple"
+              size="lg"
+              icon={<IconPlus size={16} />}
+              disabled={loading || !tenantMode}
+            >
+              {loading ? "Gerando…" : "Gerar licença"}
+            </ActionButton>
           </div>
         </form>
       </div>
@@ -340,14 +346,13 @@ export default function SupervisorTenantsPage() {
                     <td>
                       <span className="license-key-cell">
                         <code>{r.licenseKey}</code>
-                        <button
-                          type="button"
-                          className="btn-icon"
+                        <ActionButton
+                          variant="ghost"
+                          size="sm"
+                          icon={<IconCopy size={14} />}
                           title="Copiar chave"
                           onClick={() => void copiar(r.licenseKey)}
-                        >
-                          ⧉
-                        </button>
+                        />
                       </span>
                     </td>
                     <td>{r.clienteNome || "—"}</td>
@@ -360,30 +365,33 @@ export default function SupervisorTenantsPage() {
                     <td>{r.clinicaId ?? "—"}</td>
                     <td>
                       <div className="license-actions">
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-sm"
+                        <ActionButton
+                          variant="outline"
+                          size="sm"
+                          icon={<IconEdit size={14} />}
                           disabled={actionsDisabled(r.status)}
                           onClick={() => openEdit(r)}
                         >
                           Editar
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-sm btn-warn"
+                        </ActionButton>
+                        <ActionButton
+                          variant="warning"
+                          size="sm"
+                          icon={<IconBan size={14} />}
                           disabled={actionsDisabled(r.status) || r.status !== "pending"}
                           onClick={() => void cancelarLicenca(r)}
                         >
                           Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-sm btn-danger"
+                        </ActionButton>
+                        <ActionButton
+                          variant="danger"
+                          size="sm"
+                          icon={<IconTrash size={14} />}
                           disabled={actionsDisabled(r.status)}
                           onClick={() => void revogarLicenca(r)}
                         >
                           Revogar
-                        </button>
+                        </ActionButton>
                       </div>
                     </td>
                   </tr>

@@ -2,6 +2,15 @@ import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom"
 import { AuthGate } from "./components/AuthGate";
 import { LicenseBanner } from "./components/LicenseBanner";
 import { SupervisorTenantSelector, useSupervisorTenants } from "./components/SupervisorTenantSelector";
+import { SidebarNavItem } from "./components/ui/SidebarNavItem";
+import {
+  IconDatabase,
+  IconKey,
+  IconLock,
+  IconLogout,
+  IconUpload,
+  IconUsers,
+} from "./components/ui/Icons";
 import { IS_EMBEDDED, clearLabSession, getLabUser, getSupervisorTenantId, isPlatformUser } from "./lib/auth";
 import { canSeeMenu } from "./lib/permissions";
 import { SessionProvider, useSession } from "./lib/SessionContext";
@@ -106,21 +115,21 @@ function AppShell() {
           {isSupervisor ? (
             <div>
               <div className="nav-section">Suporte (MASTER)</div>
-              <NavLink to="/supervisor/cadastro" className={({ isActive }) => (isActive ? "active" : "")}>
+              <SidebarNavItem to="/supervisor/cadastro" icon={<IconUsers size={18} />}>
                 Cadastro de clientes
-              </NavLink>
-              <NavLink to="/supervisor/tenants" className={({ isActive }) => (isActive ? "active" : "")}>
+              </SidebarNavItem>
+              <SidebarNavItem to="/supervisor/tenants" icon={<IconKey size={18} />}>
                 Gerador de licenças
-              </NavLink>
-              <NavLink to="/supervisor/backup" className={({ isActive }) => (isActive ? "active" : "")}>
+              </SidebarNavItem>
+              <SidebarNavItem to="/supervisor/backup" icon={<IconDatabase size={18} />}>
                 Backup de empresas
-              </NavLink>
-              <NavLink to="/supervisor/import" className={({ isActive }) => (isActive ? "active" : "")}>
+              </SidebarNavItem>
+              <SidebarNavItem to="/supervisor/import" icon={<IconUpload size={18} />}>
                 Importação de banco
-              </NavLink>
-              <NavLink to="/supervisor/conta" className={({ isActive }) => (isActive ? "active" : "")}>
+              </SidebarNavItem>
+              <SidebarNavItem to="/supervisor/conta" icon={<IconLock size={18} />}>
                 Senha do supervisor
-              </NavLink>
+              </SidebarNavItem>
               {supervisorTenantSelected ? (
                 <>
                   <div className="nav-section" style={{ marginTop: 12 }}>
@@ -158,6 +167,7 @@ function AppShell() {
         {!IS_EMBEDDED ? (
           <div className="sidebar-footer">
             <button type="button" className="btn-logout" onClick={handleLogout}>
+              <IconLogout size={16} />
               Sair
             </button>
           </div>
@@ -168,7 +178,7 @@ function AppShell() {
         <Routes>
           <Route
             path="/"
-            element={isSupervisor ? <Navigate to="/supervisor/tenants" replace /> : <Dashboard />}
+            element={isSupervisor ? <Navigate to="/supervisor/cadastro" replace /> : <Dashboard />}
           />
           <Route path="/supervisor/cadastro" element={<SupervisorCadastroPage />} />
           <Route path="/supervisor/tenants" element={<SupervisorTenantsPage />} />
