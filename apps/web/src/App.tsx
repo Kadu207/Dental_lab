@@ -27,6 +27,9 @@ import ProcedimentosPage from "./pages/Procedimentos";
 import GruposPage from "./pages/Grupos";
 import EtiquetasPage from "./pages/Etiquetas";
 import SupervisorTenantsPage from "./pages/SupervisorTenants";
+import SupervisorBackupPage from "./pages/SupervisorBackup";
+import SupervisorImportPage from "./pages/SupervisorImport";
+import SupervisorLicencasPage from "./pages/SupervisorLicencas";
 import SupervisorContaPage from "./pages/SupervisorConta";
 
 type NavItem = { to: string; label: string; resource: string; end?: boolean; standaloneOnly?: boolean };
@@ -101,12 +104,18 @@ function AppShell() {
         <nav className="sidebar-nav">
           {isSupervisor ? (
             <div>
-              <div className="nav-section">Supervisor Inova</div>
+              <div className="nav-section">Suporte (MASTER)</div>
               <NavLink to="/supervisor/tenants" className={({ isActive }) => (isActive ? "active" : "")}>
-                Empresas (tenants)
+                Gerador de licenças
+              </NavLink>
+              <NavLink to="/supervisor/backup" className={({ isActive }) => (isActive ? "active" : "")}>
+                Backup de empresas
+              </NavLink>
+              <NavLink to="/supervisor/import" className={({ isActive }) => (isActive ? "active" : "")}>
+                Importação de banco
               </NavLink>
               <NavLink to="/supervisor/conta" className={({ isActive }) => (isActive ? "active" : "")}>
-                Alterar senha
+                Senha do supervisor
               </NavLink>
               {supervisorTenantSelected ? (
                 <>
@@ -158,6 +167,9 @@ function AppShell() {
             element={isSupervisor ? <Navigate to="/supervisor/tenants" replace /> : <Dashboard />}
           />
           <Route path="/supervisor/tenants" element={<SupervisorTenantsPage />} />
+          <Route path="/supervisor/backup" element={<SupervisorBackupPage />} />
+          <Route path="/supervisor/import" element={<SupervisorImportPage />} />
+          <Route path="/supervisor/licencas" element={<SupervisorLicencasPage />} />
           <Route path="/supervisor/conta" element={<SupervisorContaPage />} />
           <Route path="/laboratorio" element={<LaboratorioPage />} />
           <Route path="/clientes" element={<ClientesPage />} />

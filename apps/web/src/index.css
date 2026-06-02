@@ -996,6 +996,88 @@ p.muted {
   flex-wrap: wrap;
 }
 
+.row-muted td {
+  opacity: 0.65;
+}
+
+.gerador-icon {
+  font-size: 1.1em;
+}
+
+.gerador-card-title {
+  margin-bottom: 12px;
+  color: var(--primary);
+}
+
+.btn-gerar {
+  margin-left: auto;
+}
+
+.license-table .license-key-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-icon {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.btn-icon:hover {
+  background: var(--bg);
+  color: var(--primary);
+}
+
+.license-status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.license-status-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.license-status-revoked {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.license-status-pending {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.license-status-muted {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.license-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.btn-warn:not(:disabled) {
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+.btn-danger:not(:disabled) {
+  border-color: #dc2626;
+  color: #991b1b;
+}
+
 @media (max-width: 768px) {
   .supervisor-layout,
   .supervisor-status-grid {

@@ -8,14 +8,23 @@ export const PRODUCT_CLOUD_LAB = "cloud_lab";
 export const PRODUCT_LAB = "lab";
 export const ALLOWED_PRODUCTS = new Set([PRODUCT_CLOUD, PRODUCT_CLOUD_LAB, PRODUCT_LAB]);
 
+export const PERIOD_TRIAL7 = "trial7";
 export const PERIOD_TRIAL = "trial";
 export const PERIOD_1Y = "1y";
 export const PERIOD_2Y = "2y";
 export const PERIOD_4Y = "4y";
 export const PERIOD_5Y = "5y";
-export const ALLOWED_PERIODS = new Set([PERIOD_TRIAL, PERIOD_1Y, PERIOD_2Y, PERIOD_4Y, PERIOD_5Y]);
+export const ALLOWED_PERIODS = new Set([
+  PERIOD_TRIAL7,
+  PERIOD_TRIAL,
+  PERIOD_1Y,
+  PERIOD_2Y,
+  PERIOD_4Y,
+  PERIOD_5Y,
+]);
 
 export const PERIOD_DAYS: Record<string, number> = {
+  trial7: 7,
   trial: 30,
   "1y": 365,
   "2y": 730,
@@ -30,6 +39,7 @@ export const PRODUCT_LABELS: Record<string, string> = {
 };
 
 export const PERIOD_LABELS: Record<string, string> = {
+  trial7: "Teste (7 dias)",
   trial: "Teste (30 dias)",
   "1y": "1 ano",
   "2y": "2 anos",
@@ -97,6 +107,7 @@ export function computeEndsAt(startsAt: string, periodo: string): string {
 
 export function refreshLicenseStatus(row: LicenseRow, now = new Date()): string {
   if (row.status === "revoked") return "revoked";
+  if (row.status === "cancelled") return "cancelled";
   const ends = parseTs(row.ends_at);
   if (ends && ends <= now) return "expired";
   if (row.status === "pending") return "pending";

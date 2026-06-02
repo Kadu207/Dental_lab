@@ -114,7 +114,7 @@ supervisorTenantsRouter.get("/:clinicaId/licencas", async (req, res) => {
     const tenant = await getTenant(clinicaId);
     if (!tenant) return res.status(404).json({ erro: "Tenant não encontrado" });
     const rows = await withLabClient(clinicaId, async (db) => listLicensesForTenant(db, clinicaId));
-    res.json(rows.map(serializeLicenseRow));
+    res.json(rows.map((r) => serializeLicenseRow(r, tenant)));
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao listar licenças" });
   }

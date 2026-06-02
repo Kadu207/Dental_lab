@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireSupervisor } from "../../auth/rbac.js";
 import { exportTenantBackup, importBackupToNewTenant, importTenantBackup } from "../../tenants/backup.js";
+import { countBundleRows, listBackupLogs, logBackupExport } from "../../tenants/backup-log.js";
+import { getTenant } from "../../tenants/registry.js";
 
 type TenantRouteParams = { clinicaId: string };
 
@@ -15,8 +17,23 @@ supervisorBackupRouter.get("/export", async (req, res) => {
   }
 
   try {
+    const tenant = await getTenant(clinicaId);
+    if (!tenant) return res.status(404).json({ erro: "Tenant não encontrado" });
+
     const bundle = await exportTenantBackup(clinicaId);
     const filename = `dental-lab-tenant-${clinicaId}-${new Date().toISOString().slice(0, 10)}.json`;
+    const rowCount = countBundleRows(bundle);
+    const notes = String(req.query.notes ?? "").trim();
+
+    await logBackupExport({
+      clinicaId,
+      postgresSchema: tenant.postgresSchema,
+      filename,
+      rowCount,
+      notes: notes || undefined,
+      createdBy: req.auth?.sub ?? "supervisor",
+    });
+
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.send(JSON.stringify(bundle, null, 2));

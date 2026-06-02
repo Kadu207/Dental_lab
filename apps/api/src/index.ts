@@ -19,6 +19,8 @@ import { gruposRouter } from "./routes/grupos.js";
 import { supervisorTenantsRouter } from "./routes/supervisor/tenants.js";
 import { supervisorAccountRouter } from "./routes/supervisor/account.js";
 import { supervisorBackupRouter, supervisorBackupNewRouter } from "./routes/supervisor/backup.js";
+import { supervisorBackupsListRouter } from "./routes/supervisor/backups-list.js";
+import { supervisorLicensesRouter } from "./routes/supervisor/licenses.js";
 import { getClinicaId } from "./routes/helpers.js";
 import {
   criarRegistroProtese,
@@ -118,6 +120,8 @@ app.use("/api/licencas", licencasRouter);
 app.use("/api/supervisor/tenants", supervisorTenantsRouter);
 app.use("/api/supervisor/tenants/:clinicaId/backup", supervisorBackupRouter);
 app.use("/api/supervisor/backup", supervisorBackupNewRouter);
+app.use("/api/supervisor/backups", supervisorBackupsListRouter);
+app.use("/api/supervisor/licencas", supervisorLicensesRouter);
 app.use("/api/supervisor/conta", supervisorAccountRouter);
 
 app.get("/api/config/lab", requirePolicy("config", "read"), async (req, res) => {

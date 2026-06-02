@@ -244,6 +244,20 @@ export const api = {
     licenseStatus: (clinicaId: number) =>
       request<TenantLicenseStatus>(`/supervisor/tenants/${clinicaId}/licenca/status`),
     listLicenses: (clinicaId: number) => request<TenantLicenseRow[]>(`/supervisor/tenants/${clinicaId}/licencas`),
+    listAllLicenses: () => request<TenantLicenseRow[]>("/supervisor/licencas"),
+    updateLicense: (
+      clinicaId: number,
+      id: number,
+      data: { clienteNome?: string; notes?: string; periodo?: string },
+    ) =>
+      request<TenantLicenseRow>(`/supervisor/licencas/${clinicaId}/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    cancelLicense: (clinicaId: number, id: number) =>
+      request<TenantLicenseRow>(`/supervisor/licencas/${clinicaId}/${id}/cancelar`, { method: "POST" }),
+    revokeLicense: (clinicaId: number, id: number) =>
+      request<TenantLicenseRow>(`/supervisor/licencas/${clinicaId}/${id}/revogar`, { method: "POST" }),
     generateLicense: (
       clinicaId: number,
       data: { produto?: string; periodo?: string; clienteNome?: string; notes?: string },
@@ -257,6 +271,7 @@ export const api = {
         method: "PUT",
         body: JSON.stringify({ senhaAtual, novaSenha }),
       }),
+    listBackupHistory: () => request<TenantBackupLogRecord[]>("/supervisor/backups"),
     exportBackupUrl: (clinicaId: number) => `${BASE}/supervisor/tenants/${clinicaId}/backup/export`,
     importBackup: (clinicaId: number, bundle: unknown, replace: boolean) =>
       request<{ msg: string; clinicaId: number; postgresSchema: string; importedRows: number }>(
@@ -484,6 +499,20 @@ export interface GrupoAtribuicao {
   createdAt?: string;
 }
 
+export interface TenantBackupLogRecord {
+  id: number;
+  clinicaId: number;
+  postgresSchema: string;
+  filename: string;
+  rowCount: number;
+  notes: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  nomeFantasia?: string | null;
+  razaoSocial?: string | null;
+  clienteCodigo?: string | null;
+}
+
 export interface TenantRecord {
   clinicaId: number;
   postgresSchema: string;
@@ -506,9 +535,11 @@ export interface TenantLicenseRow {
   periodo: string;
   periodoLabel: string;
   clienteNome: string;
+  clienteCodigo?: string | null;
   startsAt: string;
   endsAt: string;
   status: string;
+  statusLabel?: string;
   createdAt: string;
   createdBy: string;
   notes: string;

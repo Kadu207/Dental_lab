@@ -26,3 +26,17 @@ CREATE TABLE IF NOT EXISTS dental_lab_platform.platform_usuarios (
   ativo BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS dental_lab_platform.tenant_backup_log (
+  id SERIAL PRIMARY KEY,
+  clinica_id INTEGER NOT NULL,
+  postgres_schema TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  row_count INTEGER NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_backup_log_clinica ON dental_lab_platform.tenant_backup_log (clinica_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_backup_log_created ON dental_lab_platform.tenant_backup_log (created_at DESC);
