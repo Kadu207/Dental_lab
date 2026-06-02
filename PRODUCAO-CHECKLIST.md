@@ -77,6 +77,16 @@ pwsh ./infra/ops/print-test.ps1 -BaseUrl http://127.0.0.1:9180
 
 Ou na UI: **Configuração → Imprimir etiqueta de teste (3 vias)**.
 
+### Automatizar (cron na VPS)
+
+```bash
+cd /opt/dental-lab-system
+bash infra/ops/backup-postgres-vps.sh          # teste manual
+bash infra/ops/install-backup-cron-vps.sh      # diário 03:15
+```
+
+Arquivos em `/var/backups/dental-lab/postgres/` (retenção 14 dias). Ver [docs/POS-DEPLOY-VPS.md](./docs/POS-DEPLOY-VPS.md).
+
 ### Backup manual (bash)
 docker compose -f docker-compose.standalone.yml exec -T lab-postgres \
   pg_dump -U dental_lab dental_lab > backup-lab-$(date +%Y%m%d).sql

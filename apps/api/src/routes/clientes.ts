@@ -17,7 +17,20 @@ clientesRouter.get("/", requirePolicy("clientes", "read"), async (req, res) => {
       params.push(limit, offset);
     }
     const rows = await db.queryAll(sql, params);
-    res.json(rows.map(mapCliente));
+    const mapped = rows.map(mapCliente);
+    if (limit) {
+      const countRow = await db.queryOne<{ c: number }>(
+        "SELECT COUNT(*) as c FROM clientes WHERE clinica_id = ?",
+        [getClinicaId(req)],
+      );
+      return res.json({
+        items: mapped,
+        total: Number(countRow?.c ?? 0),
+        limit,
+        offset,
+      });
+    }
+    res.json(mapped);
   });
 });
 

@@ -47,7 +47,23 @@ protesesRouter.get("/", requirePolicy("proteses", "read"), async (req, res) => {
       params.push(limit, offset);
     }
     const rows = await db.queryAll(sql, params);
-    res.json(await Promise.all(rows.map((r) => mapProteseFromDb(db, r))));
+    const mapped = await Promise.all(rows.map((r) => mapProteseFromDb(db, r)));
+    if (limit) {
+      let countSql = "SELECT COUNT(*) as c FROM proteses WHERE clinica_id = ?";
+      const countParams: unknown[] = [getClinicaId(req)];
+      if (setor && SETORES_VALIDOS.includes(setor as (typeof SETORES_VALIDOS)[number])) {
+        countSql += " AND setor = ?";
+        countParams.push(setor);
+      }
+      const countRow = await db.queryOne<{ c: number }>(countSql, countParams);
+      return res.json({
+        items: mapped,
+        total: Number(countRow?.c ?? 0),
+        limit,
+        offset,
+      });
+    }
+    res.json(mapped);
   });
 });
 

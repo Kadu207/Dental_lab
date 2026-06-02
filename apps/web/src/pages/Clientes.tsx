@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type Cliente } from "../api";
 import { CrudForm, Modal } from "../components";
+import { DEFAULT_PAGE_SIZE, PaginationBar } from "../components/PaginationBar";
 
 const FIELDS = [
   { name: "nome", label: "Nome completo", required: true, full: true },
@@ -13,11 +14,24 @@ const FIELDS = [
 
 export default function ClientesPage() {
   const [items, setItems] = useState<Cliente[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [modal, setModal] = useState<{ mode: "create" | "edit"; item?: Cliente } | null>(null);
   const [erro, setErro] = useState("");
 
-  const load = () => api.clientes.list().then(setItems).catch((e) => setErro(e.message));
-  useEffect(() => { load(); }, []);
+  const load = (pageOffset = offset) =>
+    api.clientes
+      .listPaginated(DEFAULT_PAGE_SIZE, pageOffset)
+      .then((r) => {
+        setItems(r.items);
+        setTotal(r.total);
+        setOffset(r.offset);
+      })
+      .catch((e) => setErro(e.message));
+
+  useEffect(() => {
+    load(0);
+  }, []);
 
   const save = async (data: Record<string, string>) => {
     try {
@@ -27,7 +41,7 @@ export default function ClientesPage() {
         await api.clientes.create(data);
       }
       setModal(null);
-      load();
+      load(offset);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro");
     }
@@ -36,7 +50,7 @@ export default function ClientesPage() {
   const remove = async (id: string) => {
     if (!confirm("Excluir este paciente?")) return;
     await api.clientes.remove(id);
-    load();
+    load(offset);
   };
 
   return (
@@ -81,6 +95,12 @@ export default function ClientesPage() {
             )}
           </tbody>
         </table>
+        <PaginationBar
+          total={total}
+          limit={DEFAULT_PAGE_SIZE}
+          offset={offset}
+          onPage={(next) => load(next)}
+        />
       </div>
       {modal && (
         <Modal title={modal.mode === "create" ? "Novo Paciente" : "Editar Paciente"} onClose={() => setModal(null)}>

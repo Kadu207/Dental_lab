@@ -164,6 +164,15 @@ Ou use o script: `bash infra/ops/deploy-vps.sh` (faz pull + rebuild quando não 
 - UI: `/supervisor/tenants` → selecionar tenant → Exportar / Importar JSON
 - CLI na VPS: `bash infra/ops/backup-tenant-vps.sh <clinica_id>` (requer `DENTAL_LAB_SUPERVISOR_TOKEN`)
 
+**Backup Postgres automático (VPS):**
+
+```bash
+bash infra/ops/backup-postgres-vps.sh
+bash infra/ops/install-backup-cron-vps.sh
+```
+
+Guia completo pós-deploy: [docs/POS-DEPLOY-VPS.md](./POS-DEPLOY-VPS.md)
+
 **`Defina DENTAL_LAB_JWT_SECRET` / `DENTAL_LAB_LICENSE_SERVER_API_KEY`**
 ```bash
 openssl rand -hex 32   # JWT

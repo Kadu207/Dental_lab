@@ -10,6 +10,13 @@ function apiBase(): string {
 
 const BASE = apiBase();
 
+export type Paginated<T> = {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 function authHeaders(): Record<string, string> {
   const h: Record<string, string> = {};
   const token = getAuthToken();
@@ -80,6 +87,8 @@ export const api = {
   },
   clientes: {
     list: () => request<Cliente[]>("/clientes"),
+    listPaginated: (limit: number, offset: number) =>
+      request<Paginated<Cliente>>(`/clientes?limit=${limit}&offset=${offset}`),
     create: (d: Partial<Cliente>) => request<Cliente>("/clientes", { method: "POST", body: JSON.stringify(d) }),
     update: (id: string, d: Partial<Cliente>) => request<Cliente>(`/clientes/${id}`, { method: "PUT", body: JSON.stringify(d) }),
     remove: (id: string) => request<void>(`/clientes/${id}`, { method: "DELETE" }),
@@ -102,6 +111,11 @@ export const api = {
   proteses: {
     list: (setor?: string) =>
       request<Protese[]>(setor ? `/proteses?setor=${encodeURIComponent(setor)}` : "/proteses"),
+    listPaginated: (limit: number, offset: number, setor?: string) => {
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      if (setor) params.set("setor", setor);
+      return request<Paginated<Protese>>(`/proteses?${params}`);
+    },
     get: (id: string) => request<{ protese: Protese; historico: Historico[] }>(`/proteses/${id}`),
     create: (d: NovaProtese & { setor?: string }) =>
       request<{ protese: Protese; etiqueta: unknown }>("/proteses", { method: "POST", body: JSON.stringify(d) }),

@@ -80,3 +80,5 @@ curl -fsS "http://127.0.0.1:9180/api/health" | python3 -m json.tool || {
 }
 
 echo "==> OK — commit $(git rev-parse --short HEAD) em produção"
+echo "==> Opcional: bash infra/ops/install-backup-cron-vps.sh (backup Postgres diário)"
+echo "==> Pós-deploy: docs/POS-DEPLOY-VPS.md (trocar senhas admin/supervisor)"

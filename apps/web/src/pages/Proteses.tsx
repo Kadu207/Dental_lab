@@ -4,9 +4,12 @@ import { CrudForm, Modal, StatusBadge } from "../components";
 import { TAMANHOS_ETIQUETA, resolveTamanho, type TamanhoEtiqueta } from "../lib/labelSizes";
 import { SETORES_LAB } from "../lib/setores";
 import { downloadWithAuth } from "../lib/downloadWithAuth";
+import { DEFAULT_PAGE_SIZE, PaginationBar } from "../components/PaginationBar";
 
 export default function ProtesesPage() {
   const [proteses, setProteses] = useState<Protese[]>([]);
+  const [protesesTotal, setProtesesTotal] = useState(0);
+  const [protesesOffset, setProtesesOffset] = useState(0);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [labConfig, setLabConfig] = useState<LabConfig | null>(null);
   const [modal, setModal] = useState(false);
@@ -15,15 +18,21 @@ export default function ProtesesPage() {
   const [setorNovo, setSetorNovo] = useState("gesso");
   const [pacienteSel, setPacienteSel] = useState("");
 
-  const load = async () => {
-    setProteses(await api.proteses.list());
-    setClientes(await api.clientes.list());
-    const cfg = await api.config.getLab();
+  const load = async (pageOffset = protesesOffset) => {
+    const [protesesPage, clientesList, cfg] = await Promise.all([
+      api.proteses.listPaginated(DEFAULT_PAGE_SIZE, pageOffset),
+      api.clientes.list(),
+      api.config.getLab(),
+    ]);
+    setProteses(protesesPage.items);
+    setProtesesTotal(protesesPage.total);
+    setProtesesOffset(protesesPage.offset);
+    setClientes(clientesList);
     setLabConfig(cfg);
     setTamanho(resolveTamanho(cfg));
   };
   useEffect(() => {
-    load();
+    void load(0);
   }, []);
 
   const save = async (data: Record<string, string>) => {
@@ -47,7 +56,7 @@ export default function ProtesesPage() {
     });
     setUltima(result.protese);
     setModal(false);
-    load();
+    void load(0);
   };
 
   const imprimir = (id: string) => {
@@ -120,6 +129,12 @@ export default function ProtesesPage() {
             )}
           </tbody>
         </table>
+        <PaginationBar
+          total={protesesTotal}
+          limit={DEFAULT_PAGE_SIZE}
+          offset={protesesOffset}
+          onPage={(next) => void load(next)}
+        />
       </div>
 
       {modal && (
