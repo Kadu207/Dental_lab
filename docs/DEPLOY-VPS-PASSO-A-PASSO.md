@@ -156,6 +156,8 @@ curl -sv http://127.0.0.1:9180/api/health 2>&1 | head -30
 | `Connection refused` | `lab-web` down | `docker compose ... up -d` |
 | HTML em vez de JSON | URL errada | Use `/api/health` |
 | `502 Bad Gateway` | API não responde na porta 3333 | Logs `lab-api`; conferir `schema-platform.sql` no image (commit recente) |
+| `password authentication failed for user "dental_lab"` | `.env` com senha diferente da do volume Postgres | `bash infra/ops/fix-postgres-password-vps.sh` ou restaurar senha antiga do `.env.broken.*` |
+| `mkdir: cannot create directory '/var/backups'` | Path system sem sudo | `git pull` + backup em `./backups/postgres/` (commit recente) |
 
 Ou use o script: `bash infra/ops/deploy-vps.sh` (faz pull + rebuild quando não há conflito).
 
