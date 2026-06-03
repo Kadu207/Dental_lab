@@ -1,102 +1,55 @@
 # Dental Lab — Documentação Lovable (índice)
 
-Use este índice para levar o frontend ao [Lovable](https://lovable.dev). A **API não muda** — só a UI.
+Índice da documentação **bidirecional** com o [Lovable](https://lovable.dev): o que enviamos, o que a Lovable devolveu, e como integrar no monorepo.
 
 **Produção:** https://dentallab.inovatitech.com.br  
-**API:** `https://dentallab.inovatitech.com.br/api` (ou `/api` no mesmo host)
-
-**Commits de referência:** `0cbb241` (fornecedores), `7429ca6` (RBAC/login), `493363c` (auth e-mail)
+**API:** https://dentallab.inovatitech.com.br/api
 
 ---
 
-## Documentos (copiar para o Lovable)
+## Documentos
 
-| Documento | Conteúdo |
-|-----------|----------|
-| **[LOVABLE-FRONTEND-HANDOFF.md](./LOVABLE-FRONTEND-HANDOFF.md)** | Console **Supervisor** (cadastro clientes, licenças, backup, importação), design system, APIs `/api/supervisor/*`, prompt supervisor |
-| **[LOVABLE-AUTH-RBAC-HANDOFF.md](./LOVABLE-AUTH-RBAC-HANDOFF.md)** | **Login**, esqueci senha, redefinir senha, RBAC em Colaboradores/Grupos, APIs `/api/auth/*`, prompt auth |
-
----
-
-## Ordem sugerida no Lovable
-
-1. **Auth** — login + recuperação de senha (`LOVABLE-AUTH-RBAC-HANDOFF.md` §8)
-2. **Supervisor** — sidebar MASTER + cadastro + licenças (`LOVABLE-FRONTEND-HANDOFF.md` §10)
-3. **Tenant** — menu Cadastro + Laboratório (prompt abaixo)
+| Documento | Direção | Conteúdo |
+|-----------|---------|----------|
+| **[DOCUMENTACAO.md](./DOCUMENTACAO.md)** | **Lovable → Cursor** | Spec **completa do frontend exportado** (TanStack Start, rotas, API, odontograma 3D, RBAC) |
+| **[LOVABLE-INTEGRACAO.md](./LOVABLE-INTEGRACAO.md)** | Integração | Mapa Lovable ↔ monorepo, gaps de API, plano de port |
+| [LOVABLE-FRONTEND-HANDOFF.md](./LOVABLE-FRONTEND-HANDOFF.md) | Cursor → Lovable | Console supervisor, design system |
+| [LOVABLE-AUTH-RBAC-HANDOFF.md](./LOVABLE-AUTH-RBAC-HANDOFF.md) | Cursor → Lovable | Login, esqueci senha, RBAC em Colaboradores |
 
 ---
 
-## Menu tenant (operador do laboratório)
+## Resumo do export Lovable (`DOCUMENTACAO.md`)
 
-```
-Cadastro
-  Empresa
-  Pacientes          (rota /clientes)
-  Colaboradores      (rota /colaboradores — RBAC aqui, não no login)
-  Fornecedores       (rota /fornecedores)
-
-Laboratório
-  Próteses
-  Etiquetas
-  Status da Produção (rota /setores)
-
-Dashboard            (rota /)
-```
-
-Menu filtrado por `GET /api/auth/me` → `permissoes[]` (resource + read/write/delete).
+- **Stack export:** TanStack Start v1, Tailwind v4, shadcn/ui, TanStack Query, Three.js (odontograma).
+- **Stack monorepo:** React Router + Vite 6, CSS custom — ver [LOVABLE-INTEGRACAO.md](./LOVABLE-INTEGRACAO.md).
+- **Novidade principal:** módulo **Odontograma 3D** (`/odontograma`) — ainda **sem API** no `apps/api`.
+- **Alinhado:** auth, supervisor, fornecedores, grupos, design tokens (Outfit/DM Sans).
 
 ---
 
-## Tela: Fornecedores (tenant)
+## Integração rápida (monorepo)
 
-Modal largo, formulário em **3 seções**:
+1. Leia [LOVABLE-INTEGRACAO.md](./LOVABLE-INTEGRACAO.md) (gaps e fases).
+2. Porte componentes (odontograma) para `apps/web` **ou** mantenha app Lovable separado apontando para `/api`.
+3. `VITE_DENTAL_LAB_API_URL=/api` no build web.
+4. Deploy VPS:
 
-1. **Identificação** — Razão social*, Nome fantasia, CNPJ (máscara)
-2. **Contato** — Nome do contato, Telefone (máscara), E-mail
-3. **Endereço e observações** — Endereço, Observações (textarea)
-
-API: `GET/POST /api/fornecedores`, `PUT/DELETE /api/fornecedores/:id`  
-Referência: `apps/web/src/components/FornecedorForm.tsx`
-
----
-
-## Prompt tenant (colar no Lovable após auth)
-
-```
-Crie o app Dental Lab — módulo laboratório (React + TypeScript + Tailwind).
-
-Design: Outfit títulos, DM Sans corpo, sidebar escura #0c0f1a, cards brancos, botões com ícone Lucide.
-API REST: base /api, Authorization Bearer, header X-Clinica-Id quando aplicável.
-
-Menu:
-- Cadastro: Empresa, Pacientes, Colaboradores, Fornecedores
-- Laboratório: Próteses, Etiquetas, Status da Produção
-- Dashboard
-
-/login já existe — integrar com POST /api/auth/login.
-
-/fornecedores: tabela + modal largo com seções Identificação, Contato, Endereço (máscaras CNPJ e telefone BR).
-/colaboradores: tabela + modal CRUD; card "Perfis com RBAC" na página (Supervisor, Admin, Gestor, Recepção, Laboratório, Colaborador, Estagiário com descrição de cada um) — NÃO no login.
-
-/pacientes: CRUD pacientes (nome, cpf, telefone, email, endereço).
-/empresa: formulário matriz + unidades + licenciamento.
-
-Responsivo desktop-first, estilo SaaS premium Inova/Excellence.
+```bash
+cd /opt/dental-lab-system
+bash infra/ops/redeploy-vps.sh
 ```
 
 ---
 
-## Reintegração no monorepo
+## Menu tenant (monorepo atual)
 
-1. Exportar do Lovable (zip ou repo).
-2. Copiar para `apps/web/src/pages/` e `apps/web/src/components/`.
-3. Reutilizar `apps/web/src/api.ts` (não duplicar tipos/endpoints).
-4. `npm run build -w @dental/web`
-5. VPS:
-   ```bash
-   cd /opt/dental-lab-system
-   bash infra/ops/redeploy-vps.sh
-   ```
+```
+Cadastro: Empresa, Pacientes (/clientes), Colaboradores, Fornecedores
+Laboratório: Próteses, Etiquetas, Status da Produção (/setores)
+Dashboard (/)
+```
+
+Lovable adiciona: `/inicio`, `/odontograma`, `/sem-acesso` — ver mapa em LOVABLE-INTEGRACAO.
 
 ---
 
@@ -107,21 +60,17 @@ Responsivo desktop-first, estilo SaaS premium Inova/Excellence.
 | supervisor | supervisor123 | Console MASTER |
 | admin | admin123 | Tenant #1 |
 
-Trocar após primeiro acesso: `docs/POS-DEPLOY-VPS.md`.
+`docs/POS-DEPLOY-VPS.md`
 
 ---
 
-## Arquivos de referência no GitHub
+## Código de referência no monorepo
 
-Repo: https://github.com/Kadu207/Dental_lab.git
-
-| Área | Caminhos |
-|------|----------|
+| Área | Caminho |
+|------|---------|
 | API cliente | `apps/web/src/api.ts` |
-| Auth | `apps/web/src/lib/auth.ts`, `pages/Login.tsx` |
-| Supervisor | `pages/SupervisorCadastro.tsx`, `SupervisorTenants.tsx`, … |
-| UI | `components/ui/ActionButton.tsx`, `Icons.tsx`, `PageHeader.tsx` |
-| Máscaras | `lib/inputMasks.ts`, `lib/viacep.ts` |
+| API servidor | `apps/api/src/` |
+| Auth / login | `apps/web/src/pages/Login.tsx`, `lib/auth.ts` |
+| Supervisor | `apps/web/src/pages/Supervisor*.tsx` |
+| Fornecedores | `apps/web/src/components/FornecedorForm.tsx` |
 | RBAC UI | `lib/rbac-perfis.ts`, `components/auth/RbacPerfilPoliticas.tsx` |
-| Fornecedores | `components/FornecedorForm.tsx`, `pages/Fornecedores.tsx` |
-| Rotas/menu | `App.tsx`, `index.css` |
