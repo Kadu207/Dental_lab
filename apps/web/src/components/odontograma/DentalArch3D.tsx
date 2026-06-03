@@ -1,112 +1,254 @@
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Text } from "@react-three/drei";
-import { useMemo } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
+import { RoundedBox, OrbitControls, Html, ContactShadows } from "@react-three/drei";
+import type { Group } from "three";
 import {
   buildArch,
   CONDITION_MAP,
+  toothName,
   type ToothConditionId,
-  type ToothState,
+  type ToothLayout,
+  type ToothStateMap,
 } from "../../lib/odontograma";
 
-type Props = {
-  states: ToothState[];
-  selectedFdi: number | null;
-  onSelect: (fdi: number) => void;
-  onConditionChange?: (fdi: number, condition: ToothConditionId) => void;
+const tooltipStyle: CSSProperties = {
+  pointerEvents: "none",
+  whiteSpace: "nowrap",
+  borderRadius: 8,
+  background: "#0f172a",
+  color: "#f8fafc",
+  padding: "6px 10px",
+  fontSize: 12,
+  fontWeight: 500,
+  boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
 };
 
-function ToothMesh({
-  fdi,
-  x,
-  y,
-  rotation,
-  scale,
-  condition,
-  selected,
-  onSelect,
-}: {
-  fdi: number;
-  x: number;
-  y: number;
-  rotation: number;
-  scale: number;
+interface ToothProps {
+  layout: ToothLayout;
   condition: ToothConditionId;
   selected: boolean;
-  onSelect: () => void;
-}) {
-  const color = CONDITION_MAP[condition]?.color ?? "#e2e8f0";
-  const hidden = condition === "ausente";
+  onSelect: (fdi: number) => void;
+  onHover: (fdi: number | null) => void;
+}
+
+function cuspOffsets(type: ToothLayout["type"]): Array<[number, number]> {
+  switch (type) {
+    case "molar":
+      return [
+        [0.26, 0.26],
+        [0.26, -0.26],
+        [-0.26, 0.26],
+        [-0.26, -0.26],
+      ];
+    case "premolar":
+      return [
+        [0.24, 0],
+        [-0.24, 0],
+      ];
+    case "canino":
+      return [[0, 0]];
+    default:
+      return [];
+  }
+}
+
+function Tooth({ layout, condition, selected, onSelect, onHover }: ToothProps) {
+  const meta = CONDITION_MAP[condition];
+  const [w, h, d] = layout.size;
+  const isUpper = layout.arch === "upper";
+  const absent = condition === "ausente";
+  const metalness = condition === "implante" || condition === "coroa" ? 0.6 : 0.05;
+  const rootDir = isUpper ? 1 : -1;
+  const occlDir = -rootDir;
+  const rootHeight = h * 0.9;
+  const rootY = rootDir * (h / 2 + rootHeight / 2 - 0.05);
+  const crownH = h * 0.82;
+  const occlY = occlDir * (crownH / 2);
+  const cusps = cuspOffsets(layout.type);
+  const cuspR = Math.min(w, d) * 0.22;
+  const incisor = layout.type === "incisivo";
+  const rootCount = layout.type === "molar" ? 2 : 1;
+
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation();
+    onSelect(layout.fdi);
+  };
+  const handleOver = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    onHover(layout.fdi);
+    document.body.style.cursor = "pointer";
+  };
+  const handleOut = () => {
+    onHover(null);
+    document.body.style.cursor = "auto";
+  };
 
   return (
-    <group position={[x * 3.2, y * 1.8, 0]} rotation={[0, 0, (rotation * Math.PI) / 180]}>
-      {!hidden && (
-        <mesh
-          scale={[0.22 * scale, 0.35 * scale, 0.18 * scale]}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect();
-          }}
-        >
-          <boxGeometry args={[1, 1.4, 0.6]} />
-          <meshStandardMaterial
-            color={color}
-            emissive={selected ? "#a78bfa" : "#000000"}
-            emissiveIntensity={selected ? 0.35 : 0}
-          />
-        </mesh>
-      )}
-      <Text
-        position={[0, hidden ? 0 : -0.35, 0.2]}
-        fontSize={0.14}
-        color={selected ? "#7c3aed" : "#334155"}
-        anchorX="center"
-        anchorY="middle"
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect();
-        }}
+    <group
+      position={layout.position}
+      rotation={[0, layout.rotationY, 0]}
+      onClick={handleClick}
+      onPointerOver={handleOver}
+      onPointerOut={handleOut}
+    >
+      <RoundedBox
+        args={[w, crownH, d]}
+        radius={Math.min(w, crownH, d) * 0.3}
+        smoothness={4}
+        position={[0, 0, 0]}
+        castShadow
+        receiveShadow
       >
-        {String(fdi)}
-      </Text>
+        <meshStandardMaterial
+          color={meta.color}
+          roughness={0.32}
+          metalness={metalness}
+          transparent={absent}
+          opacity={absent ? 0.16 : 1}
+          emissive={selected ? "#a78bfa" : "#000000"}
+          emissiveIntensity={selected ? 0.6 : 0}
+        />
+      </RoundedBox>
+
+      {!absent && (
+        <>
+          {incisor && (
+            <mesh position={[0, occlY, 0]} castShadow>
+              <boxGeometry args={[w * 0.9, h * 0.12, d * 0.45]} />
+              <meshStandardMaterial color={meta.color} roughness={0.3} metalness={metalness} />
+            </mesh>
+          )}
+          {cusps.map(([ox, oz], i) => (
+            <mesh key={i} position={[ox * w, occlY + occlDir * cuspR * 0.5, oz * d]} castShadow>
+              <sphereGeometry args={[cuspR, 16, 16]} />
+              <meshStandardMaterial
+                color={meta.color}
+                roughness={0.3}
+                metalness={metalness}
+                emissive={selected ? "#a78bfa" : "#000000"}
+                emissiveIntensity={selected ? 0.4 : 0}
+              />
+            </mesh>
+          ))}
+        </>
+      )}
+
+      {!absent &&
+        Array.from({ length: rootCount }).map((_, i) => {
+          const spread = rootCount > 1 ? (i === 0 ? -1 : 1) : 0;
+          return (
+            <mesh
+              key={`root-${i}`}
+              position={[spread * w * 0.22, rootY, 0]}
+              rotation={[isUpper ? 0 : Math.PI, 0, 0]}
+              castShadow
+            >
+              <coneGeometry args={[w * (rootCount > 1 ? 0.2 : 0.32), rootHeight, 12]} />
+              <meshStandardMaterial color={meta.color} roughness={0.6} metalness={0.02} />
+            </mesh>
+          );
+        })}
     </group>
   );
 }
 
-function ArchScene({ states, selectedFdi, onSelect }: Props) {
-  const layout = useMemo(() => buildArch(), []);
-  const map = useMemo(() => Object.fromEntries(states.map((s) => [s.fdi, s])), [states]);
+function Scene({
+  states,
+  selected,
+  onSelect,
+  autoRotate,
+}: {
+  states: ToothStateMap;
+  selected: number | null;
+  onSelect: (fdi: number) => void;
+  autoRotate: boolean;
+}) {
+  const arch = useMemo(() => buildArch(), []);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const groupRef = useRef<Group>(null);
+
+  useFrame((_, delta) => {
+    if (autoRotate && groupRef.current && hovered === null) {
+      groupRef.current.rotation.y += delta * 0.08;
+    }
+  });
+
+  const hoveredLayout = arch.find((t) => t.fdi === hovered) ?? null;
 
   return (
     <>
-      <ambientLight intensity={0.85} />
-      <directionalLight position={[4, 6, 8]} intensity={0.9} />
-      {layout.map((t) => {
-        const st = map[t.fdi];
-        const condition = st?.condition ?? "sadio";
-        return (
-          <ToothMesh
-            key={t.fdi}
-            fdi={t.fdi}
-            x={t.x}
-            y={t.y}
-            rotation={t.rotation}
-            scale={t.scale}
-            condition={condition}
-            selected={selectedFdi === t.fdi}
-            onSelect={() => onSelect(t.fdi)}
+      <ambientLight intensity={0.7} />
+      <directionalLight position={[5, 8, 6]} intensity={1.1} castShadow />
+      <directionalLight position={[-6, 4, -4]} intensity={0.4} />
+
+      <group ref={groupRef}>
+        {arch.map((layout) => (
+          <Tooth
+            key={layout.fdi}
+            layout={layout}
+            condition={states[layout.fdi]?.condition ?? "sadio"}
+            selected={selected === layout.fdi}
+            onSelect={onSelect}
+            onHover={setHovered}
           />
-        );
-      })}
-      <OrbitControls enablePan enableZoom maxPolarAngle={Math.PI / 1.8} minPolarAngle={0.2} />
+        ))}
+
+        {hoveredLayout && (
+          <Html
+            position={[
+              hoveredLayout.position[0],
+              hoveredLayout.position[1] + (hoveredLayout.arch === "upper" ? 2.2 : -2.2),
+              hoveredLayout.position[2],
+            ]}
+            center
+            distanceFactor={12}
+          >
+            <div style={tooltipStyle}>
+              <strong>{hoveredLayout.fdi}</strong> · {toothName(hoveredLayout.fdi)}
+              <span style={{ marginLeft: 6, opacity: 0.75 }}>
+                ({CONDITION_MAP[states[hoveredLayout.fdi]?.condition ?? "sadio"].label})
+              </span>
+            </div>
+          </Html>
+        )}
+      </group>
+
+      <ContactShadows position={[0, -2.6, 0]} opacity={0.35} scale={18} blur={2.5} far={6} />
+
+      <OrbitControls
+        enablePan={false}
+        minDistance={8}
+        maxDistance={22}
+        minPolarAngle={Math.PI * 0.15}
+        maxPolarAngle={Math.PI * 0.85}
+        makeDefault
+      />
     </>
   );
 }
 
-export function DentalArch3D(props: Props) {
+type Props = {
+  states: ToothStateMap;
+  selected: number | null;
+  onSelect: (fdi: number) => void;
+  autoRotate?: boolean;
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void;
+};
+
+export function DentalArch3D({ states, selected, onSelect, autoRotate = true, onCanvasReady }: Props) {
   return (
-    <div className="odontograma-canvas-wrap" style={{ height: 360, width: "100%", borderRadius: 12 }}>
-      <Canvas camera={{ position: [0, 0, 6], fov: 42 }} style={{ background: "var(--surface-2, #f8fafc)" }}>
-        <ArchScene {...props} />
+    <div className="odontograma-canvas-wrap">
+      <Canvas
+        shadows
+        dpr={[1, 2]}
+        camera={{ position: [0, 1.5, 14], fov: 42 }}
+        gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
+        onCreated={({ gl }) => onCanvasReady?.(gl.domElement)}
+        style={{ width: "100%", height: "100%" }}
+      >
+        <color attach="background" args={["#0c0f1a"]} />
+        <fog attach="fog" args={["#0c0f1a", 16, 30]} />
+        <Scene states={states} selected={selected} onSelect={onSelect} autoRotate={autoRotate} />
       </Canvas>
     </div>
   );

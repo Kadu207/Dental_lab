@@ -21,6 +21,7 @@ import { BrandLogo } from "./components/BrandLogo";
 import Dashboard from "./pages/Dashboard";
 import ClientesPage from "./pages/Clientes";
 import OdontogramaPage from "./pages/Odontograma";
+import SemAcessoPage from "./pages/SemAcesso";
 import FornecedoresPage from "./pages/Fornecedores";
 import EstoquePage from "./pages/Estoque";
 import ProtesesPage from "./pages/Proteses";
@@ -191,6 +192,7 @@ function AppShell() {
           <Route path="/laboratorio" element={<LaboratorioPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/odontograma" element={<OdontogramaPage />} />
+          <Route path="/sem-acesso" element={<SemAcessoPage />} />
           <Route path="/fornecedores" element={<FornecedoresPage />} />
           <Route path="/estoque" element={<EstoquePage />} />
           <Route path="/proteses" element={<ProtesesPage />} />

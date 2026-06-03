@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, type UsuarioPermissao } from "../api";
 import { isAuthenticated } from "../lib/auth";
 
@@ -6,12 +6,14 @@ interface SessionContextValue {
   permissoes: UsuarioPermissao[] | null;
   perfil: string | null;
   loading: boolean;
+  setSession: (perms: UsuarioPermissao[] | null, perfil: string | null) => void;
 }
 
 const SessionContext = createContext<SessionContextValue>({
   permissoes: null,
   perfil: null,
   loading: true,
+  setSession: () => {},
 });
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -39,8 +41,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  const setSession = useCallback((perms: UsuarioPermissao[] | null, p: string | null) => {
+    setPermissoes(perms);
+    setPerfil(p);
+  }, []);
+
   return (
-    <SessionContext.Provider value={{ permissoes, perfil, loading }}>{children}</SessionContext.Provider>
+    <SessionContext.Provider value={{ permissoes, perfil, loading, setSession }}>
+      {children}
+    </SessionContext.Provider>
   );
 }
 

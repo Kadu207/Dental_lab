@@ -103,6 +103,17 @@ export const api = {
     update: (id: string, d: Partial<Cliente>) => request<Cliente>(`/clientes/${id}`, { method: "PUT", body: JSON.stringify(d) }),
     remove: (id: string) => request<void>(`/clientes/${id}`, { method: "DELETE" }),
   },
+  /** Alias Lovable → mesma API que `clientes` */
+  pacientes: {
+    list: (params?: { limit?: number; offset?: number; page?: number }) => {
+      const limit = params?.limit ?? 200;
+      const offset =
+        params?.page && params?.limit ? (params.page - 1) * params.limit : (params?.offset ?? 0);
+      return request<Paginated<Cliente> | Cliente[]>(
+        `/clientes?limit=${limit}&offset=${offset}`,
+      );
+    },
+  },
   odontograma: {
     get: (pacienteId: string) =>
       request<{ pacienteId: string; dentes: OdontogramaDente[]; updatedAt: string | null }>(
@@ -336,7 +347,7 @@ export interface Cliente {
 export interface OdontogramaDente {
   fdi: number;
   condition: string;
-  note?: string;
+  note?: string | null;
 }
 
 export interface Fornecedor {

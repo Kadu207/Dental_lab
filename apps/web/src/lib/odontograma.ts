@@ -1,4 +1,4 @@
-/** Domínio odontograma — numeração FDI e condições clínicas */
+/** Odontograma — numeração FDI, condições e layout 3D da arcada */
 
 export type ToothConditionId =
   | "sadio"
@@ -11,24 +11,23 @@ export type ToothConditionId =
   | "extracao"
   | "ausente";
 
-export type ToothType = "incisivo" | "canino" | "premolar" | "molar";
-
 export interface ToothCondition {
   id: ToothConditionId;
   label: string;
   color: string;
+  description: string;
 }
 
 export const CONDITIONS: ToothCondition[] = [
-  { id: "sadio", label: "Sadio", color: "#e2e8f0" },
-  { id: "carie", label: "Cárie", color: "#dc2626" },
-  { id: "restauracao", label: "Restauração", color: "#2563eb" },
-  { id: "coroa", label: "Coroa", color: "#7c3aed" },
-  { id: "canal", label: "Canal", color: "#d97706" },
-  { id: "implante", label: "Implante", color: "#059669" },
-  { id: "protese", label: "Prótese", color: "#0891b2" },
-  { id: "extracao", label: "Extração", color: "#64748b" },
-  { id: "ausente", label: "Ausente", color: "#1e293b" },
+  { id: "sadio", label: "Saudável", color: "#f1f5f9", description: "Dente íntegro" },
+  { id: "carie", label: "Cárie", color: "#dc2626", description: "Lesão de cárie" },
+  { id: "restauracao", label: "Restauração", color: "#2563eb", description: "Dente restaurado" },
+  { id: "coroa", label: "Coroa", color: "#d97706", description: "Coroa protética" },
+  { id: "canal", label: "Canal", color: "#7c3aed", description: "Tratamento de canal" },
+  { id: "implante", label: "Implante", color: "#0891b2", description: "Implante dentário" },
+  { id: "protese", label: "Prótese", color: "#059669", description: "Prótese" },
+  { id: "extracao", label: "Extração indicada", color: "#f97316", description: "Indicado para extração" },
+  { id: "ausente", label: "Ausente", color: "#94a3b8", description: "Dente ausente" },
 ];
 
 export const CONDITION_MAP = Object.fromEntries(CONDITIONS.map((c) => [c.id, c])) as Record<
@@ -36,62 +35,96 @@ export const CONDITION_MAP = Object.fromEntries(CONDITIONS.map((c) => [c.id, c])
   ToothCondition
 >;
 
-export interface ToothState {
-  fdi: number;
-  condition: ToothConditionId;
-  note?: string;
-}
+export const UPPER_FDI = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
+export const LOWER_FDI = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
 
-export interface ArchToothLayout {
-  fdi: number;
-  type: ToothType;
-  x: number;
-  y: number;
-  rotation: number;
-  scale: number;
-}
-
-const UPPER = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
-const LOWER = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+export type ToothType = "incisivo" | "canino" | "premolar" | "molar";
 
 export function toothType(fdi: number): ToothType {
-  const n = fdi % 10;
-  if (n === 1 || n === 2) return "incisivo";
-  if (n === 3) return "canino";
-  if (n === 4 || n === 5) return "premolar";
+  const pos = fdi % 10;
+  if (pos <= 2) return "incisivo";
+  if (pos === 3) return "canino";
+  if (pos <= 5) return "premolar";
   return "molar";
 }
 
-function archRow(teeth: number[], y: number, spread = 0.42): ArchToothLayout[] {
-  const n = teeth.length;
-  return teeth.map((fdi, i) => {
-    const t = (i / (n - 1)) * 2 - 1;
-    const x = t * spread;
-    const rot = (Math.atan2(t * 0.3, 1) * 180) / Math.PI;
+export function toothName(fdi: number): string {
+  const labels: Record<ToothType, string> = {
+    incisivo: "Incisivo",
+    canino: "Canino",
+    premolar: "Pré-molar",
+    molar: "Molar",
+  };
+  return labels[toothType(fdi)];
+}
+
+export interface ToothLayout {
+  fdi: number;
+  type: ToothType;
+  position: [number, number, number];
+  rotationY: number;
+  size: [number, number, number];
+  arch: "upper" | "lower";
+}
+
+const TYPE_SIZE: Record<ToothType, [number, number, number]> = {
+  incisivo: [0.55, 1.1, 0.45],
+  canino: [0.6, 1.25, 0.55],
+  premolar: [0.72, 1.0, 0.7],
+  molar: [0.95, 0.95, 0.9],
+};
+
+function buildRow(fdis: number[], arch: "upper" | "lower"): ToothLayout[] {
+  const n = fdis.length;
+  const tMax = 1.18;
+  const archWidth = 4.6;
+  const archDepth = 3.0;
+  const y = arch === "upper" ? 0.7 : -0.7;
+
+  return fdis.map((fdi, i) => {
+    const frac = n === 1 ? 0.5 : i / (n - 1);
+    const t = (frac - 0.5) * 2 * tMax;
+    const x = Math.sin(t) * archWidth;
+    const z = Math.cos(t) * archDepth - archDepth;
     const type = toothType(fdi);
-    const scale = type === "molar" ? 1.15 : type === "premolar" ? 1 : type === "canino" ? 0.9 : 0.85;
-    return { fdi, type, x, y, rotation: rot, scale };
+    return {
+      fdi,
+      type,
+      position: [x, y, z] as [number, number, number],
+      rotationY: -t,
+      size: TYPE_SIZE[type],
+      arch,
+    };
   });
 }
 
-export function buildArch(): ArchToothLayout[] {
-  return [...archRow(UPPER, 0.55), ...archRow(LOWER, -0.55)];
+export function buildArch(): ToothLayout[] {
+  return [...buildRow(UPPER_FDI, "upper"), ...buildRow(LOWER_FDI, "lower")];
 }
 
-export function defaultToothStates(): ToothState[] {
-  return buildArch().map((t) => ({ fdi: t.fdi, condition: "sadio" }));
+export interface ToothState {
+  fdi: number;
+  condition: ToothConditionId;
+  note?: string | null;
 }
 
+export type ToothStateMap = Record<number, ToothState>;
+
+export function statesToMap(states: ToothState[] | undefined): ToothStateMap {
+  const map: ToothStateMap = {};
+  for (const s of states ?? []) {
+    map[s.fdi] = { fdi: s.fdi, condition: s.condition, note: s.note ?? null };
+  }
+  return map;
+}
+
+export function mapToStates(map: ToothStateMap): ToothState[] {
+  return Object.values(map)
+    .filter((s) => s.condition !== "sadio" || (s.note && s.note.length > 0))
+    .sort((a, b) => a.fdi - b.fdi);
+}
+
+/** Compat: mescla dentes salvos com arcada completa (legado). */
 export function mergeToothStates(saved: ToothState[] | null | undefined): ToothState[] {
-  const base = defaultToothStates();
-  if (!saved?.length) return base;
-  const map = new Map(saved.map((s) => [s.fdi, s]));
-  return base.map((t) => {
-    const s = map.get(t.fdi);
-    return s ? { ...t, condition: s.condition, note: s.note } : t;
-  });
-}
-
-export function statesToMap(states: ToothState[]): Record<number, ToothState> {
-  return Object.fromEntries(states.map((s) => [s.fdi, s]));
+  return mapToStates(statesToMap(saved ?? undefined));
 }

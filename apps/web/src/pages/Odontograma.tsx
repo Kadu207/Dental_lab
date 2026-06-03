@@ -1,44 +1,75 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Cliente } from "../api";
+import { ActionButton } from "../components/ui/ActionButton";
+import { PageHeader } from "../components/ui/PageHeader";
 import { PermissionGate } from "../components/PermissionGate";
+import { usePermissions } from "../hooks/usePermissions";
+import { normalizeList } from "../lib/pagination";
 import {
   CONDITIONS,
   CONDITION_MAP,
-  mergeToothStates,
+  LOWER_FDI,
+  UPPER_FDI,
+  mapToStates,
+  statesToMap,
+  toothName,
   type ToothConditionId,
   type ToothState,
+  type ToothStateMap,
 } from "../lib/odontograma";
-import { clearHistory, formatVersionDate, getHistory, pushVersion, type OdontogramaVersion } from "../lib/odontogramaHistory";
+import {
+  formatVersionDate,
+  getHistory,
+  pushVersion,
+  type OdontogramaVersion,
+} from "../lib/odontogramaHistory";
 import { exportOdontogramaPdf } from "../lib/odontogramaPdf";
-import { useSession } from "../lib/SessionContext";
-import { canAccess } from "../lib/permissions";
 
 const DentalArch3D = lazy(() =>
   import("../components/odontograma/DentalArch3D").then((m) => ({ default: m.DentalArch3D })),
 );
 
-export default function OdontogramaPage() {
-  const { permissoes } = useSession();
-  const canWrite = canAccess(permissoes, "odontograma", "write");
+const RESOURCE = "odontograma";
+type ViewMode = "3d" | "list" | "history";
 
+function OdontogramaPage() {
+  const { can } = usePermissions();
+  const canWrite = can(RESOURCE, "write");
+
+  const [mounted, setMounted] = useState(false);
   const [pacientes, setPacientes] = useState<Cliente[]>([]);
+  const [pacientesErro, setPacientesErro] = useState("");
   const [pacienteId, setPacienteId] = useState("");
-  const [states, setStates] = useState<ToothState[]>(mergeToothStates([]));
-  const [selectedFdi, setSelectedFdi] = useState<number | null>(null);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [activeCondition, setActiveCondition] = useState<ToothConditionId>("carie");
+  const [selectedTooth, setSelectedTooth] = useState<number | null>(null);
+  const [stateMap, setStateMap] = useState<ToothStateMap>({});
+  const [dirty, setDirty] = useState(false);
+  const [view, setView] = useState<ViewMode>("3d");
   const [history, setHistory] = useState<OdontogramaVersion[]>([]);
-  const [erro, setErro] = useState("");
-  const [salvando, setSalvando] = useState(false);
   const [carregando, setCarregando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+  const [msg, setMsg] = useState("");
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
-  const paciente = useMemo(() => pacientes.find((p) => p.id === pacienteId), [pacientes, pacienteId]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    api.clientes
-      .list()
-      .then(setPacientes)
-      .catch((e) => setErro(e instanceof Error ? e.message : "Erro ao carregar pacientes"));
+    api.pacientes
+      .list({ limit: 200 })
+      .then((data) => {
+        const page = normalizeList<Cliente>(data, { limit: 200 });
+        setPacientes(page.items);
+      })
+      .catch((e) => setPacientesErro(e instanceof Error ? e.message : "Lista indisponível"));
   }, []);
+
+  const pacienteNome = useMemo(
+    () => pacientes.find((p) => String(p.id) === pacienteId)?.nome ?? "",
+    [pacientes, pacienteId],
+  );
 
   const loadOdontograma = useCallback(async (id: string) => {
     if (!id) return;
@@ -46,12 +77,14 @@ export default function OdontogramaPage() {
     setErro("");
     try {
       const data = await api.odontograma.get(id);
-      setStates(mergeToothStates(data.dentes as ToothState[]));
+      setStateMap(statesToMap(data.dentes as ToothState[]));
       setUpdatedAt(data.updatedAt);
-      setHistory(getHistory(id));
-      setSelectedFdi(null);
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro ao carregar odontograma");
+      setDirty(false);
+      setSelectedTooth(null);
+    } catch {
+      setStateMap({});
+      setUpdatedAt(null);
+      setDirty(false);
     } finally {
       setCarregando(false);
     }
@@ -59,26 +92,54 @@ export default function OdontogramaPage() {
 
   useEffect(() => {
     if (pacienteId) void loadOdontograma(pacienteId);
+    setHistory(pacienteId ? getHistory(pacienteId) : []);
   }, [pacienteId, loadOdontograma]);
 
-  const setCondition = (fdi: number, condition: ToothConditionId) => {
+  const applyTooth = (fdi: number) => {
+    setSelectedTooth(fdi);
     if (!canWrite) return;
-    setStates((prev) => prev.map((s) => (s.fdi === fdi ? { ...s, condition } : s)));
+    setStateMap((prev) => {
+      const current = prev[fdi]?.condition;
+      const next: ToothConditionId = current === activeCondition ? "sadio" : activeCondition;
+      return { ...prev, [fdi]: { fdi, condition: next, note: prev[fdi]?.note ?? null } };
+    });
+    setDirty(true);
   };
 
-  const setNote = (fdi: number, note: string) => {
+  const setToothCondition = (fdi: number, cond: ToothConditionId) => {
     if (!canWrite) return;
-    setStates((prev) => prev.map((s) => (s.fdi === fdi ? { ...s, note } : s)));
+    setStateMap((prev) => ({
+      ...prev,
+      [fdi]: { fdi, condition: cond, note: prev[fdi]?.note ?? null },
+    }));
+    setDirty(true);
+  };
+
+  const setToothNote = (fdi: number, note: string) => {
+    if (!canWrite) return;
+    setStateMap((prev) => ({
+      ...prev,
+      [fdi]: { fdi, condition: prev[fdi]?.condition ?? "sadio", note },
+    }));
+    setDirty(true);
   };
 
   const salvar = async () => {
     if (!pacienteId || !canWrite) return;
     setSalvando(true);
     setErro("");
+    setMsg("");
     try {
-      const res = await api.odontograma.save(pacienteId, states);
+      const dentes = mapToStates(stateMap);
+      const res = await api.odontograma.save(
+        pacienteId,
+        dentes.map((d) => ({ fdi: d.fdi, condition: d.condition, note: d.note ?? undefined })),
+      );
       setUpdatedAt(res.updatedAt);
-      setHistory(pushVersion(pacienteId, states));
+      pushVersion(pacienteId, mapToStates(stateMap));
+      setHistory(getHistory(pacienteId));
+      setDirty(false);
+      setMsg("Odontograma salvo.");
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar");
     } finally {
@@ -86,145 +147,312 @@ export default function OdontogramaPage() {
     }
   };
 
-  const restaurarVersao = (v: OdontogramaVersion) => {
-    if (!canWrite) return;
-    setStates(mergeToothStates(v.dentes));
-  };
-
-  const exportarPdf = () => {
-    if (!paciente) return;
+  const handleExportPdf = () => {
+    if (!pacienteId) {
+      setErro("Selecione um paciente primeiro.");
+      return;
+    }
+    let imageDataUrl: string | null = null;
+    try {
+      imageDataUrl = canvasRef.current?.toDataURL("image/png") ?? null;
+    } catch {
+      imageDataUrl = null;
+    }
     exportOdontogramaPdf({
-      pacienteNome: paciente.nome,
-      pacienteId: paciente.id,
-      states,
-      savedAt: updatedAt ?? undefined,
+      pacienteNome,
+      pacienteId,
+      imageDataUrl,
+      states: mapToStates(stateMap),
+      savedAt: updatedAt,
     });
+    setMsg("PDF gerado.");
   };
 
-  const selected = selectedFdi != null ? states.find((s) => s.fdi === selectedFdi) : null;
+  const restoreVersion = (v: OdontogramaVersion) => {
+    setStateMap(statesToMap(v.dentes));
+    setDirty(true);
+    setSelectedTooth(null);
+    setView("3d");
+    setMsg(`Versão de ${formatVersionDate(v.savedAt)} restaurada. Salve para confirmar.`);
+  };
+
+  const marked = mapToStates(stateMap);
+  const selectedState = selectedTooth != null ? stateMap[selectedTooth] : null;
 
   return (
-    <PermissionGate resource="odontograma" fallback={<p className="alert alert-error">Sem permissão para odontograma.</p>}>
-      <div className="page-header">
-        <h2>Odontograma</h2>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" className="btn btn-secondary" onClick={exportarPdf} disabled={!pacienteId}>
-            Exportar PDF
-          </button>
-          {canWrite ? (
-            <button type="button" className="btn btn-primary" onClick={salvar} disabled={!pacienteId || salvando}>
-              {salvando ? "Salvando…" : "Salvar"}
-            </button>
-          ) : null}
-        </div>
-      </div>
+    <div className="odontograma-page">
+      <PageHeader
+        title="Odontograma 3D"
+        subtitle="Arcada interativa em 3D. Selecione um paciente, escolha uma condição e clique nos dentes para marcar."
+        actions={
+          <>
+            <ActionButton variant="outline" disabled={!pacienteId} onClick={handleExportPdf}>
+              Exportar PDF
+            </ActionButton>
+            {canWrite ? (
+              <ActionButton
+                variant="purple"
+                disabled={!pacienteId || !dirty || salvando}
+                onClick={salvar}
+              >
+                {salvando ? "Salvando…" : "Salvar odontograma"}
+              </ActionButton>
+            ) : null}
+          </>
+        }
+      />
 
       {erro ? <div className="alert alert-error">{erro}</div> : null}
+      {msg ? <div className="alert alert-success">{msg}</div> : null}
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+      <div className="card odontograma-patient-card">
+        <label className="form-label">
           Paciente
-          <select
-            value={pacienteId}
-            onChange={(e) => setPacienteId(e.target.value)}
-            style={{ display: "block", width: "100%", maxWidth: 480, marginTop: 6 }}
-          >
-            <option value="">Selecione um paciente…</option>
-            {pacientes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
+          {pacientes.length > 0 ? (
+            <select
+              className="form-input"
+              value={pacienteId}
+              onChange={(e) => setPacienteId(e.target.value)}
+            >
+              <option value="">Selecione um paciente…</option>
+              {pacientes.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              className="form-input"
+              value={pacienteId}
+              onChange={(e) => setPacienteId(e.target.value.replace(/\D/g, ""))}
+              placeholder={pacientesErro || "ID do paciente"}
+            />
+          )}
         </label>
         {updatedAt ? (
-          <p style={{ fontSize: "0.875rem", color: "var(--muted)", margin: 0 }}>
-            Última gravação no servidor: {formatVersionDate(updatedAt)}
-          </p>
+          <p className="odontograma-meta">Última gravação: {formatVersionDate(updatedAt)}</p>
         ) : null}
       </div>
 
-      {!pacienteId ? (
-        <p style={{ color: "var(--muted)" }}>Escolha um paciente para visualizar ou editar o odontograma.</p>
-      ) : carregando ? (
-        <p style={{ color: "var(--muted)" }}>Carregando odontograma…</p>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 16, alignItems: "start" }}>
-          <div className="card">
-            <Suspense fallback={<p>Carregando visualização 3D…</p>}>
-              <DentalArch3D states={states} selectedFdi={selectedFdi} onSelect={setSelectedFdi} />
-            </Suspense>
-            <p style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: 8 }}>
-              Clique em um dente para selecionar. Arraste para girar a arcada.
-            </p>
+      <div className="odontograma-tabs card">
+        {(["3d", "list", "history"] as ViewMode[]).map((id) => (
+          <button
+            key={id}
+            type="button"
+            className={`odontograma-tab${view === id ? " active" : ""}`}
+            onClick={() => setView(id)}
+          >
+            {id === "3d" ? "Arcada 3D" : id === "list" ? "Lista de dentes" : `Histórico${history.length ? ` (${history.length})` : ""}`}
+          </button>
+        ))}
+      </div>
+
+      {view === "3d" && (
+        <div className="odontograma-grid">
+          <div className="odontograma-viewport card">
+            {mounted ? (
+              <Suspense fallback={<p className="odontograma-loading">Carregando cena 3D…</p>}>
+                <DentalArch3D
+                  states={stateMap}
+                  selected={selectedTooth}
+                  onSelect={applyTooth}
+                  onCanvasReady={(c) => (canvasRef.current = c)}
+                />
+              </Suspense>
+            ) : (
+              <p className="odontograma-loading">Carregando cena 3D…</p>
+            )}
+            {carregando && pacienteId ? (
+              <span className="odontograma-badge">Carregando dentes…</span>
+            ) : null}
+            <span className="odontograma-hint">Arraste para girar · scroll para zoom</span>
           </div>
 
-          <aside className="card">
-            <h3 style={{ marginTop: 0, fontSize: "1rem" }}>Dente {selectedFdi ?? "—"}</h3>
-            {selected ? (
-              <>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-                  {CONDITIONS.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className={selected.condition === c.id ? "btn btn-primary" : "btn btn-secondary"}
-                      style={{ fontSize: "0.75rem", borderColor: c.color }}
-                      disabled={!canWrite}
-                      onClick={() => setCondition(selected.fdi, c.id)}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
-                <label style={{ display: "block", fontSize: "0.875rem" }}>
-                  Observação
-                  <textarea
-                    value={selected.note ?? ""}
+          <aside className="odontograma-side">
+            <div className="card">
+              <h3 className="odontograma-panel-title">Condições</h3>
+              <div className="odontograma-conditions">
+                {CONDITIONS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
                     disabled={!canWrite}
-                    onChange={(e) => setNote(selected.fdi, e.target.value)}
-                    rows={3}
-                    style={{ width: "100%", marginTop: 4 }}
-                  />
-                </label>
-                <p style={{ fontSize: "0.8rem", color: CONDITION_MAP[selected.condition]?.color }}>
-                  {CONDITION_MAP[selected.condition]?.label}
-                </p>
-              </>
-            ) : (
-              <p style={{ color: "var(--muted)", fontSize: "0.875rem" }}>Selecione um dente na arcada.</p>
-            )}
-
-            <h4 style={{ marginTop: 20, fontSize: "0.9rem" }}>Histórico local</h4>
-            {history.length === 0 ? (
-              <p style={{ fontSize: "0.8rem", color: "var(--muted)" }}>Salve para criar versões no navegador.</p>
-            ) : (
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "0.8rem" }}>
-                {history.slice(0, 8).map((v) => (
-                  <li key={v.id} style={{ marginBottom: 8 }}>
-                    <button type="button" className="btn btn-secondary" style={{ width: "100%" }} onClick={() => restaurarVersao(v)}>
-                      {formatVersionDate(v.savedAt)}
-                    </button>
-                  </li>
+                    className={`odontograma-cond-btn${activeCondition === c.id ? " active" : ""}`}
+                    onClick={() => setActiveCondition(c.id)}
+                  >
+                    <span className="odontograma-swatch" style={{ backgroundColor: c.color }} />
+                    {c.label}
+                  </button>
                 ))}
-              </ul>
-            )}
-            {history.length > 0 && canWrite ? (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ marginTop: 8, width: "100%" }}
-                onClick={() => {
-                  clearHistory(pacienteId);
-                  setHistory([]);
-                }}
-              >
-                Limpar histórico local
-              </button>
-            ) : null}
+              </div>
+              {canWrite ? (
+                <p className="odontograma-hint-text">
+                  Pincel: <strong>{CONDITION_MAP[activeCondition].label}</strong>. Clique no dente para
+                  aplicar (de novo volta a saudável).
+                </p>
+              ) : null}
+            </div>
+
+            <div className="card">
+              <h3 className="odontograma-panel-title">Dente selecionado</h3>
+              {selectedTooth == null ? (
+                <p className="odontograma-hint-text">Clique num dente da arcada.</p>
+              ) : (
+                <>
+                  <p className="odontograma-tooth-title">
+                    {toothName(selectedTooth)} · {selectedTooth}
+                  </p>
+                  <label className="form-label">
+                    Condição
+                    <select
+                      className="form-input"
+                      disabled={!canWrite}
+                      value={selectedState?.condition ?? "sadio"}
+                      onChange={(e) =>
+                        setToothCondition(selectedTooth, e.target.value as ToothConditionId)
+                      }
+                    >
+                      {CONDITIONS.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="form-label">
+                    Observação
+                    <textarea
+                      className="form-input"
+                      rows={3}
+                      disabled={!canWrite}
+                      value={selectedState?.note ?? ""}
+                      onChange={(e) => setToothNote(selectedTooth, e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
+            </div>
+
+            <div className="card">
+              <h3 className="odontograma-panel-title">Resumo ({marked.length})</h3>
+              {marked.length === 0 ? (
+                <p className="odontograma-hint-text">Nenhuma marcação.</p>
+              ) : (
+                <ul className="odontograma-summary">
+                  {marked.map((s) => (
+                    <li key={s.fdi}>
+                      <span
+                        className="odontograma-swatch"
+                        style={{ backgroundColor: CONDITION_MAP[s.condition].color }}
+                      />
+                      <strong>{s.fdi}</strong> {CONDITION_MAP[s.condition].label}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </aside>
         </div>
       )}
+
+      {view === "list" && (
+        <ToothListEditor stateMap={stateMap} canWrite={canWrite} onCondition={setToothCondition} onNote={setToothNote} />
+      )}
+
+      {view === "history" && (
+        <div className="card">
+          <h3 className="odontograma-panel-title">Histórico de versões</h3>
+          {!pacienteId ? (
+            <p className="odontograma-hint-text">Selecione um paciente.</p>
+          ) : history.length === 0 ? (
+            <p className="odontograma-hint-text">Nenhuma versão local. Salve para registrar.</p>
+          ) : (
+            <ul className="odontograma-history">
+              {history.map((v, i) => (
+                <li key={v.id}>
+                  <div>
+                    <strong>{formatVersionDate(v.savedAt)}</strong>
+                    {i === 0 ? <span className="odontograma-tag">Atual</span> : null}
+                    <p className="odontograma-hint-text">{v.count} dente(s) marcado(s)</p>
+                  </div>
+                  {canWrite ? (
+                    <ActionButton variant="outline" onClick={() => restoreVersion(v)}>
+                      Restaurar
+                    </ActionButton>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ToothListEditor({
+  stateMap,
+  canWrite,
+  onCondition,
+  onNote,
+}: {
+  stateMap: ToothStateMap;
+  canWrite: boolean;
+  onCondition: (fdi: number, cond: ToothConditionId) => void;
+  onNote: (fdi: number, note: string) => void;
+}) {
+  const rows = (fdis: number[], title: string) => (
+    <div className="card">
+      <h3 className="odontograma-panel-title">{title}</h3>
+      <div className="odontograma-list-rows">
+        {fdis.map((fdi) => {
+          const st = stateMap[fdi];
+          const cond = st?.condition ?? "sadio";
+          return (
+            <div key={fdi} className="odontograma-list-row">
+              <span className="odontograma-list-fdi" style={{ backgroundColor: CONDITION_MAP[cond].color }}>
+                {fdi}
+              </span>
+              <span className="odontograma-hint-text">{toothName(fdi)}</span>
+              <select
+                className="form-input"
+                disabled={!canWrite}
+                value={cond}
+                onChange={(e) => onCondition(fdi, e.target.value as ToothConditionId)}
+              >
+                {CONDITIONS.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="form-input"
+                disabled={!canWrite}
+                value={st?.note ?? ""}
+                onChange={(e) => onNote(fdi, e.target.value)}
+                placeholder="Observação…"
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="odontograma-list-grid">
+      {rows(UPPER_FDI, "Arcada superior")}
+      {rows(LOWER_FDI, "Arcada inferior")}
+    </div>
+  );
+}
+
+export default function OdontogramaRoute() {
+  return (
+    <PermissionGate resource={RESOURCE}>
+      <OdontogramaPage />
     </PermissionGate>
   );
 }

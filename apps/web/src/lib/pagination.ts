@@ -15,25 +15,68 @@ export type Paged<T> = {
   limit: number;
 };
 
-export function buildListQuery(params: ListParams): string {
-  const q = new URLSearchParams();
-  if (params.page != null) q.set("page", String(params.page));
-  if (params.limit != null) q.set("limit", String(params.limit));
-  if (params.sort) q.set("sort", params.sort);
-  if (params.order) q.set("order", params.order);
-  if (params.search?.trim()) q.set("search", params.search.trim());
-  const s = q.toString();
+export function buildListQuery(params: ListParams = {}): string {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set("page", String(params.page));
+  if (params.limit) qs.set("limit", String(params.limit));
+  if (params.sort) qs.set("sort", params.sort);
+  if (params.order) qs.set("order", params.order);
+  if (params.search) qs.set("search", params.search);
+  const s = qs.toString();
   return s ? `?${s}` : "";
 }
 
-/** Aceita array puro ou envelope paginado da API */
-export function normalizeList<T>(data: T[] | Paged<T> | null | undefined): Paged<T> {
-  if (!data) return { items: [], total: 0, page: 1, limit: 0 };
-  if (Array.isArray(data)) return { items: data, total: data.length, page: 1, limit: data.length };
-  return {
-    items: data.items ?? [],
-    total: data.total ?? data.items?.length ?? 0,
-    page: data.page ?? 1,
-    limit: data.limit ?? data.items?.length ?? 0,
-  };
+function compareValues(a: unknown, b: unknown, dir: number): number {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  if (typeof a === "number" && typeof b === "number") return (a - b) * dir;
+  return String(a).localeCompare(String(b), "pt-BR", { sensitivity: "base" }) * dir;
+}
+
+export function normalizeList<T>(
+  res: unknown,
+  params: ListParams = {},
+  getSearchText?: (item: T) => string,
+): Paged<T> {
+  const page = Math.max(1, params.page ?? 1);
+  const limit = Math.max(1, params.limit ?? 10);
+
+  if (res && typeof res === "object" && !Array.isArray(res)) {
+    const obj = res as Record<string, unknown>;
+    const arr = (obj.items ?? obj.data ?? obj.rows ?? obj.results) as T[] | undefined;
+    if (Array.isArray(arr)) {
+      const total = Number(obj.total ?? obj.count ?? obj.totalCount ?? arr.length);
+      return {
+        items: arr,
+        total: Number.isFinite(total) ? total : arr.length,
+        page: Number(obj.page ?? page),
+        limit: Number(obj.limit ?? obj.pageSize ?? limit),
+      };
+    }
+  }
+
+  if (Array.isArray(res)) {
+    let items = res as T[];
+    const q = params.search?.trim().toLowerCase();
+    if (q && getSearchText) {
+      items = items.filter((it) => getSearchText(it).toLowerCase().includes(q));
+    }
+    if (params.sort) {
+      const field = params.sort;
+      const dir = params.order === "desc" ? -1 : 1;
+      items = [...items].sort((a, b) =>
+        compareValues(
+          (a as Record<string, unknown>)[field],
+          (b as Record<string, unknown>)[field],
+          dir,
+        ),
+      );
+    }
+    const total = items.length;
+    const start = (page - 1) * limit;
+    return { items: items.slice(start, start + limit), total, page, limit };
+  }
+
+  return { items: [], total: 0, page, limit };
 }

@@ -23,6 +23,7 @@ export function routeResource(path: string): string {
     return "proteses";
   if (path.startsWith("/clientes")) return "clientes";
   if (path.startsWith("/odontograma")) return "odontograma";
+  if (path.startsWith("/sem-acesso")) return "proteses";
   if (path.startsWith("/fornecedores")) return "fornecedores";
   if (path.startsWith("/estoque")) return "estoque";
   if (path.startsWith("/proteses") || path.startsWith("/scanner") || path.startsWith("/etiquetas")) return "proteses";
