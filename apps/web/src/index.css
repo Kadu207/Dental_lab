@@ -75,6 +75,24 @@
   gap: 20px;
 }
 
+.login-panel-wide {
+  max-width: 920px;
+}
+
+.login-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .login-layout {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
 .login-brand {
   justify-content: center;
 }
@@ -156,6 +174,7 @@
   color: var(--muted);
 }
 
+.login-field,
 .login-card label {
   display: flex;
   flex-direction: column;
@@ -163,11 +182,105 @@
   font-size: 0.9rem;
 }
 
+.login-field-label {
+  font-weight: 600;
+  color: var(--primary);
+}
+
 .login-card input {
   padding: 10px 12px;
   border: 2px solid var(--input-border);
   border-radius: var(--radius);
   background: var(--input-bg);
+  width: 100%;
+}
+
+.login-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.login-password-wrap input {
+  padding-right: 44px;
+}
+
+.login-password-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.login-password-toggle:hover {
+  color: var(--primary);
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.login-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.login-rbac-hints {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 14px;
+  padding: 20px 22px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(6px);
+}
+
+.login-rbac-title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 12px;
+}
+
+.login-rbac-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.login-rbac-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.login-rbac-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #5b21b6;
+  background: #ede9fe;
+  padding: 2px 8px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.login-rbac-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .login-erro {

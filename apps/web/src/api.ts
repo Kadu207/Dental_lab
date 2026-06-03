@@ -74,8 +74,18 @@ export const api = {
         permissoes?: UsuarioPermissao[];
         isPlatformUser?: boolean;
       }>("/auth/me"),
+    perfis: () =>
+      request<{ perfis: { id: string; label: string; escopo: string }[] }>("/auth/perfis"),
+    recuperarSenhaStatus: () =>
+      request<{ smtpConfigurado: boolean; appUrl: string }>("/auth/recuperar-senha/status"),
     solicitarRecuperacaoSenha: (usuario: string, email: string, clinicaId?: number) =>
-      request<{ ok: boolean; resetToken?: string; mensagem: string }>("/auth/recuperar-senha/solicitar", {
+      request<{
+        ok: boolean;
+        resetToken?: string;
+        resetUrl?: string;
+        emailEnviado?: boolean;
+        mensagem: string;
+      }>("/auth/recuperar-senha/solicitar", {
         method: "POST",
         body: JSON.stringify({ usuario, email, clinicaId }),
       }),

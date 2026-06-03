@@ -1,6 +1,13 @@
 import { Router } from "express";
 import { AUTH_REQUIRED, DEPLOYMENT_MODE, JWT_TTL_MINUTES } from "../config.js";
-import { requestPasswordReset, resetPasswordWithToken, verifyPasswordResetToken } from "../auth/password-reset.js";
+import { PERFIL_LABELS, TENANT_PERFIS } from "../auth/rbac.js";
+import {
+  requestPasswordResetUnified,
+  resetPasswordWithToken,
+  verifyPasswordResetToken,
+} from "../auth/password-reset.js";
+import { sendPasswordResetEmail, isMailConfigured } from "../mail/mailer.js";
+import { APP_PUBLIC_URL, PASSWORD_RESET_EXPOSE_TOKEN } from "../config.js";
 import { loginStandalone } from "../auth/standalone.js";
 import { loginPlatformUser } from "../auth/platform.js";
 import { withLabClient } from "../db/client.js";
@@ -14,6 +21,18 @@ authRouter.get("/status", (_req, res) => {
     deploymentMode: DEPLOYMENT_MODE,
     loginDisponivel: DEPLOYMENT_MODE === "standalone",
   });
+});
+
+authRouter.get("/perfis", (_req, res) => {
+  const perfis = [
+    { id: "supervisor", label: PERFIL_LABELS.supervisor, escopo: "platform" },
+    ...TENANT_PERFIS.map((id) => ({
+      id,
+      label: PERFIL_LABELS[id],
+      escopo: "tenant" as const,
+    })),
+  ];
+  res.json({ perfis });
 });
 
 authRouter.post("/login", async (req, res) => {
@@ -102,18 +121,40 @@ authRouter.post("/recuperar-senha/solicitar", async (req, res) => {
   try {
     const cid = Number(clinicaId ?? 1);
     const resetToken = await withLabClient(cid, async (db) =>
-      requestPasswordReset(db, usuario, email, cid),
+      requestPasswordResetUnified(db, usuario, email, cid),
     );
 
-    res.json({
-      ok: true,
-      resetToken: resetToken ?? undefined,
-      mensagem:
-        "Se os dados estiverem corretos, prossiga para definir uma nova senha. Caso contrário, verifique com o administrador.",
-    });
+    const mensagemGenerica =
+      "Se usuário e e-mail estiverem corretos, você receberá um link para redefinir a senha em alguns minutos.";
+
+    if (resetToken) {
+      const emailEnviado = await sendPasswordResetEmail(email.trim(), usuario.trim(), resetToken);
+      if (emailEnviado) {
+        return res.json({ ok: true, emailEnviado: true, mensagem: mensagemGenerica });
+      }
+      if (PASSWORD_RESET_EXPOSE_TOKEN) {
+        return res.json({
+          ok: true,
+          resetToken,
+          emailEnviado: false,
+          mensagem:
+            "SMTP não configurado — use o link abaixo ou configure DENTAL_LAB_SMTP_* na VPS.",
+          resetUrl: `${APP_PUBLIC_URL.replace(/\/$/, "")}/redefinir-senha?token=${encodeURIComponent(resetToken)}`,
+        });
+      }
+    }
+
+    res.json({ ok: true, emailEnviado: false, mensagem: mensagemGenerica });
   } catch {
     return res.status(500).json({ erro: "Não foi possível processar a solicitação" });
   }
+});
+
+authRouter.get("/recuperar-senha/status", (_req, res) => {
+  res.json({
+    smtpConfigurado: isMailConfigured(),
+    appUrl: APP_PUBLIC_URL,
+  });
 });
 
 authRouter.post("/recuperar-senha/redefinir", async (req, res) => {
@@ -130,8 +171,12 @@ authRouter.post("/recuperar-senha/redefinir", async (req, res) => {
   }
 
   try {
-    const { clinicaId } = verifyPasswordResetToken(token.trim());
-    await withLabClient(clinicaId, async (db) => resetPasswordWithToken(db, token, novaSenha));
+    const { clinicaId, scope } = verifyPasswordResetToken(token.trim());
+    if (scope === "platform") {
+      await withLabClient(1, async (db) => resetPasswordWithToken(db, token, novaSenha));
+    } else {
+      await withLabClient(clinicaId, async (db) => resetPasswordWithToken(db, token, novaSenha));
+    }
     res.json({ ok: true, mensagem: "Senha redefinida com sucesso" });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Não foi possível redefinir a senha";

@@ -1,12 +1,20 @@
-import { FormEvent, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { FormEvent, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { LoginShell } from "../components/LoginShell";
+import { PasswordField } from "../components/auth/PasswordField";
+import { IconSave } from "../components/ui/Icons";
 
 export default function RedefinirSenhaPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const resetToken = (location.state as { resetToken?: string } | null)?.resetToken ?? "";
+  const [searchParams] = useSearchParams();
+  const resetToken = useMemo(() => {
+    const fromQuery = searchParams.get("token")?.trim();
+    if (fromQuery) return fromQuery;
+    return (location.state as { resetToken?: string } | null)?.resetToken ?? "";
+  }, [searchParams, location.state]);
+
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmar, setConfirmar] = useState("");
   const [erro, setErro] = useState("");
@@ -50,33 +58,28 @@ export default function RedefinirSenhaPage() {
 
   return (
     <LoginShell logoSize={56}>
-      <form className="login-card" onSubmit={onSubmit}>
+      <form className="login-card login-card-glass" onSubmit={onSubmit}>
         <h2>Nova senha</h2>
-        <p className="login-sub">Defina uma nova senha para acessar o sistema.</p>
-        <label>
-          Nova senha
-          <input
-            type="password"
-            value={novaSenha}
-            onChange={(e) => setNovaSenha(e.target.value)}
-            autoComplete="new-password"
-            minLength={6}
-            required
-          />
-        </label>
-        <label>
-          Confirmar senha
-          <input
-            type="password"
-            value={confirmar}
-            onChange={(e) => setConfirmar(e.target.value)}
-            autoComplete="new-password"
-            minLength={6}
-            required
-          />
-        </label>
+        <p className="login-sub">Defina uma nova senha para acessar o sistema com seu perfil RBAC.</p>
+        <PasswordField
+          label="Nova senha"
+          value={novaSenha}
+          onChange={setNovaSenha}
+          autoComplete="new-password"
+          required
+          minLength={6}
+        />
+        <PasswordField
+          label="Confirmar senha"
+          value={confirmar}
+          onChange={setConfirmar}
+          autoComplete="new-password"
+          required
+          minLength={6}
+        />
         {erro ? <p className="login-erro">{erro}</p> : null}
-        <button type="submit" disabled={loading}>
+        <button type="submit" className="login-submit" disabled={loading}>
+          <IconSave size={18} />
           {loading ? "Salvando…" : "Salvar nova senha"}
         </button>
         <Link to="/login" className="login-link">

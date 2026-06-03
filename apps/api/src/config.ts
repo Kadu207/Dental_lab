@@ -66,3 +66,25 @@ export const PLATFORM_SCHEMA = envString("DENTAL_LAB_PLATFORM_SCHEMA", "dental_l
 
 export const SUPERVISOR_SEED_PASSWORD =
   process.env.DENTAL_LAB_SUPERVISOR_PASSWORD?.trim() || "supervisor123";
+
+/** URL pública do frontend (links de recuperação de senha) */
+export const APP_PUBLIC_URL = envString(
+  "DENTAL_LAB_APP_URL",
+  "http://localhost:9180",
+);
+
+/** SMTP — recuperação de senha por e-mail */
+export const SMTP_ENABLED = envBool("DENTAL_LAB_SMTP_ENABLED", false);
+export const SMTP_HOST = process.env.DENTAL_LAB_SMTP_HOST?.trim() ?? "";
+export const SMTP_PORT = Number(process.env.DENTAL_LAB_SMTP_PORT ?? "587");
+export const SMTP_SECURE = envBool("DENTAL_LAB_SMTP_SECURE", false);
+export const SMTP_USER = process.env.DENTAL_LAB_SMTP_USER?.trim() ?? "";
+export const SMTP_PASS = process.env.DENTAL_LAB_SMTP_PASS?.trim() ?? "";
+export const SMTP_FROM =
+  process.env.DENTAL_LAB_SMTP_FROM?.trim() || "Dental Lab <noreply@dentallab.local>";
+
+/** Em dev, expõe resetToken na API quando SMTP não está configurado */
+export const PASSWORD_RESET_EXPOSE_TOKEN = envBool(
+  "DENTAL_LAB_PASSWORD_RESET_EXPOSE_TOKEN",
+  !SMTP_ENABLED,
+);

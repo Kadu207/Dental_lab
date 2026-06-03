@@ -64,6 +64,8 @@ Console **Gerador de licenças** do Excellence Dental:
 
 ## 4. Perfis e autenticação
 
+> **Login, esqueci senha e RBAC:** ver também `docs/LOVABLE-AUTH-RBAC-HANDOFF.md`.
+
 | Perfil | Acesso |
 |--------|--------|
 | `supervisor` | Menu Suporte (MASTER) — todas as rotas `/supervisor/*` |
