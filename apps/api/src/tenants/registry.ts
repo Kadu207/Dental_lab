@@ -3,6 +3,11 @@ import { PLATFORM_SCHEMA, POSTGRES_SCHEMA } from "../config.js";
 import { getPgPool } from "../db/pool.js";
 import { provisionTenantSchema } from "./provision.js";
 import { mapTenantRow, TENANT_SELECT_COLUMNS, type TenantPayload } from "./tenant-fields.js";
+import {
+  seedTenantAdmin,
+  seedTenantEmpresa,
+  type TenantBootstrapInput,
+} from "./seed-tenant.js";
 
 export type TenantStatus = "active" | "suspended" | "provisioning";
 
@@ -139,7 +144,10 @@ function insertValues(input: TenantPayload) {
   ];
 }
 
-export async function createTenant(input: TenantPayload): Promise<TenantRecord> {
+export async function createTenant(
+  input: TenantPayload,
+  bootstrap?: TenantBootstrapInput,
+): Promise<TenantRecord> {
   const pool = requirePool();
   const next = await pool.query<{ next_id: number }>(
     `SELECT COALESCE(MAX(clinica_id), 0) + 1 AS next_id FROM ${q("tenants")}`,
@@ -162,6 +170,11 @@ export async function createTenant(input: TenantPayload): Promise<TenantRecord> 
 
   try {
     await provisionTenantSchema(pool, postgresSchema);
+    schemaCache.set(clinicaId, postgresSchema);
+    if (bootstrap) {
+      await seedTenantEmpresa(clinicaId, input);
+      await seedTenantAdmin(clinicaId, bootstrap);
+    }
     await pool.query(
       `UPDATE ${q("tenants")} SET status = 'active', updated_at = NOW() WHERE clinica_id = $1`,
       [clinicaId],

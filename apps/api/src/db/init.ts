@@ -13,8 +13,9 @@ import {
   POSTGRES_SCHEMA,
   SQLITE_PATH,
   SUPERVISOR_SEED_PASSWORD,
+  PLATFORM_ADMIN_SEED_PASSWORD,
 } from "../config.js";
-import { ensurePlatformSupervisor } from "../auth/platform.js";
+import { ensurePlatformAdmin, ensurePlatformSupervisor } from "../auth/platform.js";
 import { ensureDefaultTenantRegistry } from "../tenants/registry.js";
 import { setPgPool, setSqliteDb } from "./pool.js";
 
@@ -347,6 +348,7 @@ async function initPostgres() {
        WHERE clinica_id = 1 AND lower(nome) = 'admin' AND (email IS NULL OR email = '')`,
     );
     await ensurePlatformSupervisor(pool, SUPERVISOR_SEED_PASSWORD);
+    await ensurePlatformAdmin(pool, PLATFORM_ADMIN_SEED_PASSWORD);
   }
 
   setPgPool(pool);

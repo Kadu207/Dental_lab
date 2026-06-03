@@ -11,7 +11,13 @@ import {
   IconUpload,
   IconUsers,
 } from "./components/ui/Icons";
-import { IS_EMBEDDED, clearLabSession, getLabUser, getSupervisorTenantId, isPlatformUser } from "./lib/auth";
+import {
+  canAccessSupervisorConsole,
+  clearLabSession,
+  getLabUser,
+  getSupervisorTenantId,
+  IS_EMBEDDED,
+} from "./lib/auth";
 import { canSeeMenu } from "./lib/permissions";
 import { SessionProvider, useSession } from "./lib/SessionContext";
 import LoginPage from "./pages/Login";
@@ -86,7 +92,7 @@ function filterNavSections(permissoes: ReturnType<typeof useSession>["permissoes
 function AppShell() {
   const navigate = useNavigate();
   const { permissoes, loading, perfil } = useSession();
-  const isSupervisor = perfil === "supervisor" || isPlatformUser();
+  const isSupervisor = canAccessSupervisorConsole(perfil);
   const { tenants: supervisorTenants } = useSupervisorTenants(isSupervisor);
   const sections = isSupervisor ? [] : filterNavSections(permissoes, loading);
   const user = getLabUser();

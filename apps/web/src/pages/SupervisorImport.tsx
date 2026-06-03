@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { api, type TenantRecord } from "../api";
+import { canAccessSupervisorConsole } from "../lib/auth";
 import { useSession } from "../lib/SessionContext";
 
 function tenantLabel(t: TenantRecord) {
@@ -29,7 +30,7 @@ export default function SupervisorImportPage() {
     });
   }, []);
 
-  if (perfil && perfil !== "supervisor") {
+  if (perfil && !canAccessSupervisorConsole(perfil)) {
     return <Navigate to="/" replace />;
   }
 

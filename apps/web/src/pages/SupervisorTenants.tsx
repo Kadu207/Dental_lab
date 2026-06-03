@@ -15,6 +15,7 @@ import {
   suggestClienteCodigo,
   tenantLabel,
 } from "../lib/licenseCatalog";
+import { canAccessSupervisorConsole } from "../lib/auth";
 import { useSession } from "../lib/SessionContext";
 
 export default function SupervisorTenantsPage() {
@@ -70,7 +71,7 @@ export default function SupervisorTenantsPage() {
     setFormCnpj(t.cnpj ?? "");
   }, [tenantMode, tenants]);
 
-  if (perfil && perfil !== "supervisor") {
+  if (perfil && !canAccessSupervisorConsole(perfil)) {
     return <Navigate to="/" replace />;
   }
 

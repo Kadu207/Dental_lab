@@ -1,5 +1,5 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Navigate, NavLink } from "react-router-dom";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { api, type TenantOverview, type TenantRecord } from "../api";
 import { ActionButton } from "../components/ui/ActionButton";
 import {
@@ -16,6 +16,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { applyMask, type MaskKind } from "../lib/inputMasks";
 import { licenseStatusClass } from "../lib/licenseCatalog";
 import { fetchViaCep } from "../lib/viacep";
+import { canAccessSupervisorConsole, setSupervisorTenantId } from "../lib/auth";
 import { useSession } from "../lib/SessionContext";
 
 type FormState = Record<string, string>;
@@ -47,7 +48,13 @@ const EMPTY_FORM: FormState = {
   facebook: "",
   excellenceClinicaId: "",
   clienteCodigo: "",
+  tenantStatus: "active",
+  adminLogin: "",
+  adminSenha: "",
+  adminEmail: "",
 };
+
+const CREDENTIAL_KEYS = ["adminLogin", "adminSenha", "adminEmail", "tenantStatus"] as const;
 
 type FieldDef = {
   name: keyof FormState;
@@ -93,15 +100,24 @@ function tenantDisplayName(t: TenantOverview) {
 function tenantToForm(t: TenantRecord): FormState {
   const form: FormState = { ...EMPTY_FORM };
   for (const key of Object.keys(EMPTY_FORM) as (keyof FormState)[]) {
+    if (key === "tenantStatus") {
+      form.tenantStatus = t.status === "suspended" ? "suspended" : "active";
+      continue;
+    }
+    if ((CREDENTIAL_KEYS as readonly string[]).includes(key) && key !== "tenantStatus") {
+      form[key] = "";
+      continue;
+    }
     const val = t[key as keyof TenantRecord];
     form[key] = val == null ? "" : String(val);
   }
   return form;
 }
 
-function formToPayload(form: FormState): Partial<TenantRecord> {
+function formToPayload(form: FormState, editingId: number | null): Partial<TenantRecord> {
   const out: Record<string, string | number | null> = {};
   for (const [key, val] of Object.entries(form)) {
+    if ((CREDENTIAL_KEYS as readonly string[]).includes(key)) continue;
     const trimmed = val.trim();
     if (key === "excellenceClinicaId") {
       out.excellenceClinicaId = trimmed ? Number(trimmed) : null;
@@ -109,7 +125,29 @@ function formToPayload(form: FormState): Partial<TenantRecord> {
       out[key] = trimmed || null;
     }
   }
+  if (editingId) {
+    const st = form.tenantStatus;
+    if (st === "active" || st === "suspended") {
+      out.status = st;
+    }
+  }
   return out as Partial<TenantRecord>;
+}
+
+function formToBootstrap(form: FormState, isNew: boolean): Record<string, string> | null {
+  const adminLogin = form.adminLogin.trim();
+  const adminSenha = form.adminSenha;
+  const adminEmail = form.adminEmail.trim();
+  if (isNew) {
+    if (!adminLogin || !adminSenha || !adminEmail) return null;
+    return { adminLogin, adminSenha, adminEmail };
+  }
+  if (!adminLogin && !adminSenha && !adminEmail) return null;
+  const out: Record<string, string> = {};
+  if (adminLogin) out.adminLogin = adminLogin;
+  if (adminSenha) out.adminSenha = adminSenha;
+  if (adminEmail) out.adminEmail = adminEmail;
+  return out;
 }
 
 function tenantStatusBadge(status: TenantRecord["status"]) {
@@ -118,16 +156,26 @@ function tenantStatusBadge(status: TenantRecord["status"]) {
   return <span className="badge badge-warn">{status}</span>;
 }
 
+function scrollToCadastroForm() {
+  requestAnimationFrame(() => {
+    document.getElementById("supervisor-cadastro-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
 export default function SupervisorCadastroPage() {
-  const { perfil } = useSession();
+  const navigate = useNavigate();
+  const { perfil, loading: sessionLoading } = useSession();
   const [rows, setRows] = useState<TenantOverview[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState<FormState>({ ...EMPTY_FORM });
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [formHighlight, setFormHighlight] = useState(false);
   const [msg, setMsg] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
+  const [showSenha, setShowSenha] = useState(false);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(() => {
     api.supervisor.listTenantsOverview().then(setRows).catch(() => setRows([]));
@@ -137,8 +185,20 @@ export default function SupervisorCadastroPage() {
     refresh();
   }, [refresh]);
 
-  if (perfil && perfil !== "supervisor") {
+  useEffect(() => {
+    return () => {
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    };
+  }, []);
+
+  if (!sessionLoading && perfil && !canAccessSupervisorConsole(perfil)) {
     return <Navigate to="/" replace />;
+  }
+
+  function pulseFormPanel() {
+    setFormHighlight(true);
+    if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    highlightTimer.current = setTimeout(() => setFormHighlight(false), 2400);
   }
 
   function setField(name: keyof FormState, value: string, mask?: MaskKind) {
@@ -172,14 +232,30 @@ export default function SupervisorCadastroPage() {
     setEditingId(null);
     setForm({ ...EMPTY_FORM });
     setErro("");
-    setMsg("");
+    setMsg("Nova empresa — preencha os dados comerciais e o acesso ao sistema (usuário, senha e e-mail).");
+    pulseFormPanel();
+    scrollToCadastroForm();
+    const first = document.getElementById("adminLogin");
+    if (first) first.focus();
   }
 
   function editar(row: TenantOverview) {
     setEditingId(row.clinicaId);
     setForm(tenantToForm(row));
     setErro("");
-    setMsg(`Editando empresa #${row.clinicaId}`);
+    setMsg(`Editando empresa #${row.clinicaId} — altere os dados e salve, ou use as ações de gerenciamento.`);
+    pulseFormPanel();
+    scrollToCadastroForm();
+  }
+
+  function cancelarEdicao() {
+    novo();
+    setMsg("");
+  }
+
+  function abrirLicenca(clinicaId: number) {
+    setSupervisorTenantId(clinicaId);
+    navigate("/supervisor/tenants");
   }
 
   function toggleRow(id: number) {
@@ -196,6 +272,7 @@ export default function SupervisorCadastroPage() {
   }
 
   const selectedIds = [...selected];
+  const isNew = editingId == null;
 
   async function salvar(e: FormEvent) {
     e.preventDefault();
@@ -203,19 +280,40 @@ export default function SupervisorCadastroPage() {
       setErro("Informe Razão Social ou Nome Fantasia.");
       return;
     }
+    if (editingId === 1 && form.tenantStatus === "suspended") {
+      setErro("Não é permitido suspender o tenant padrão (#1).");
+      return;
+    }
     setLoading(true);
     setErro("");
     setMsg("");
     try {
-      const payload = formToPayload(form);
+      const payload = formToPayload(form, editingId);
+      const bootstrap = formToBootstrap(form, isNew);
+      if (isNew && !bootstrap) {
+        setErro("Informe usuário, senha e e-mail de acesso do administrador do laboratório.");
+        setLoading(false);
+        return;
+      }
+      const body = { ...payload, ...bootstrap };
       if (editingId) {
-        const updated = await api.supervisor.updateTenant(editingId, payload);
-        setMsg(`Empresa #${updated.clinicaId} atualizada.`);
+        const updated = await api.supervisor.updateTenant(editingId, body);
+        setMsg(
+          bootstrap
+            ? `Empresa #${updated.clinicaId} atualizada (dados e credenciais de acesso).`
+            : `Empresa #${updated.clinicaId} atualizada.`,
+        );
         setEditingId(updated.clinicaId);
+        setForm((prev) => ({ ...tenantToForm(updated), adminSenha: "" }));
       } else {
-        const created = await api.supervisor.createTenant(payload);
-        setMsg(`Empresa cadastrada — ID Lab #${created.clinicaId} (schema ${created.postgresSchema}).`);
+        const created = await api.supervisor.createTenant(body);
+        const hint =
+          "loginHint" in created && typeof created.loginHint === "string" ? created.loginHint : "";
+        setMsg(
+          `Empresa cadastrada — ID Lab #${created.clinicaId} (schema ${created.postgresSchema}). ${hint}`.trim(),
+        );
         setEditingId(created.clinicaId);
+        setForm((prev) => ({ ...tenantToForm(created), adminSenha: "" }));
       }
       refresh();
     } catch (err) {
@@ -232,6 +330,9 @@ export default function SupervisorCadastroPage() {
       const r = await api.supervisor.bulkTenantStatus(ids, "active");
       setMsg(r.msg);
       refresh();
+      if (editingId && ids.includes(editingId)) {
+        setForm((prev) => ({ ...prev, tenantStatus: "active" }));
+      }
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Falha ao ativar");
     }
@@ -243,12 +344,15 @@ export default function SupervisorCadastroPage() {
       setErro("Não é possível suspender o tenant padrão (#1).");
       return;
     }
-    if (!window.confirm(`Suspender ${ids.length} empresa(s)?`)) return;
+    if (!window.confirm(`Suspender ${ids.length} empresa(s)? O acesso ao sistema será bloqueado.`)) return;
     setErro("");
     try {
       const r = await api.supervisor.bulkTenantStatus(ids, "suspended");
       setMsg(r.msg);
       refresh();
+      if (editingId && ids.includes(editingId)) {
+        setForm((prev) => ({ ...prev, tenantStatus: "suspended" }));
+      }
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Falha ao suspender");
     }
@@ -267,7 +371,7 @@ export default function SupervisorCadastroPage() {
         await api.supervisor.deleteTenant(id);
       }
       setSelected(new Set());
-      if (editingId && safe.includes(editingId)) novo();
+      if (editingId && safe.includes(editingId)) cancelarEdicao();
       setMsg(`${safe.length} empresa(s) removida(s).`);
       refresh();
     } catch (err) {
@@ -275,14 +379,16 @@ export default function SupervisorCadastroPage() {
     }
   }
 
+  const editingRow = editingId ? rows.find((r) => r.clinicaId === editingId) : null;
+
   return (
     <>
       <PageHeader
         title="Cadastro de clientes"
-        subtitle="Cada empresa recebe um ID Lab único (clinica_id) e schema Postgres dedicado. Vincule o ID Excellence Dental Cloud quando o cliente já usa o ERP."
+        subtitle="Provisiona schema Postgres isolado por empresa e cria o administrador do laboratório (acesso somente ao ID Lab vinculado)."
         icon={<IconUsers size={22} />}
         actions={
-          <ActionButton variant="primary" icon={<IconPlus size={16} />} onClick={novo}>
+          <ActionButton variant="primary" type="button" icon={<IconPlus size={16} />} onClick={novo}>
             Nova empresa
           </ActionButton>
         }
@@ -291,160 +397,139 @@ export default function SupervisorCadastroPage() {
       {msg ? <div className="alert alert-success">{msg}</div> : null}
       {erro ? <div className="alert alert-error">{erro}</div> : null}
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="cadastro-toolbar">
-          <h3 className="card-title">Clientes provisionados ({rows.length})</h3>
-          <div className="cadastro-bulk-actions">
-            <ActionButton
-              variant="outline"
-              size="sm"
-              icon={<IconCheck size={14} />}
-              disabled={selectedIds.length === 0}
-              onClick={() => void ativar(selectedIds)}
-            >
-              Ativar selecionados
+      <div
+        id="supervisor-cadastro-form"
+        className={`card cadastro-form-panel${formHighlight ? " cadastro-form-panel--focus" : ""}`}
+      >
+        <div className="cadastro-form-head">
+          <h3 className="card-title" style={{ marginBottom: 0 }}>
+            {isNew ? "Nova empresa" : `Editar empresa #${editingId}`}
+            {!isNew ? (
+              <span className="muted" style={{ fontWeight: 400, fontSize: "0.85rem", marginLeft: 8 }}>
+                · ID Lab {editingId}
+              </span>
+            ) : null}
+          </h3>
+          {!isNew ? (
+            <ActionButton variant="ghost" type="button" size="sm" onClick={cancelarEdicao}>
+              Cancelar edição
             </ActionButton>
-            <ActionButton
-              variant="warning"
-              size="sm"
-              icon={<IconPause size={14} />}
-              disabled={selectedIds.length === 0}
-              onClick={() => void suspender(selectedIds)}
-            >
-              Suspender selecionados
-            </ActionButton>
-            <ActionButton
-              variant="danger"
-              size="sm"
-              icon={<IconTrash size={14} />}
-              disabled={selectedIds.length === 0}
-              onClick={() => void remover(selectedIds)}
-            >
-              Remover selecionados
-            </ActionButton>
-          </div>
+          ) : null}
         </div>
 
-        {rows.length === 0 ? (
-          <p className="muted">Nenhuma empresa cadastrada.</p>
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th style={{ width: 36 }}>
-                    <input
-                      type="checkbox"
-                      checked={rows.length > 0 && selected.size === rows.length}
-                      onChange={(e) => toggleAll(e.target.checked)}
-                      aria-label="Selecionar todos"
-                    />
-                  </th>
-                  <th>ID Lab</th>
-                  <th>Empresa</th>
-                  <th>Cód. ED</th>
-                  <th>Excellence ID</th>
-                  <th>Status tenant</th>
-                  <th>Licença</th>
-                  <th>Produto / Período</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.clinicaId} className={editingId === r.clinicaId ? "row-selected" : ""}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selected.has(r.clinicaId)}
-                        onChange={() => toggleRow(r.clinicaId)}
-                        aria-label={`Selecionar ${tenantDisplayName(r)}`}
-                      />
-                    </td>
-                    <td>
-                      <strong>#{r.clinicaId}</strong>
-                      <br />
-                      <code className="muted" style={{ fontSize: "0.75rem" }}>
-                        {r.postgresSchema}
-                      </code>
-                    </td>
-                    <td>{tenantDisplayName(r)}</td>
-                    <td>{r.clienteCodigo || "—"}</td>
-                    <td>{r.excellenceClinicaId ?? "—"}</td>
-                    <td>{tenantStatusBadge(r.status)}</td>
-                    <td>
-                      <span className={licenseStatusClass(r.licenseStatus)}>{r.licenseStatusLabel}</span>
-                      {r.licenseDaysLeft != null && r.licenseStatus !== "none" ? (
-                        <div className="muted" style={{ fontSize: "0.75rem" }}>
-                          {r.licenseDaysLeft} dias
-                        </div>
-                      ) : null}
-                    </td>
-                    <td>
-                      {r.licenseProduto || "—"}
-                      {r.licensePeriodo ? ` · ${r.licensePeriodo}` : ""}
-                    </td>
-                    <td>
-                      <div className="license-actions">
-                        <ActionButton variant="outline" size="sm" icon={<IconEdit size={14} />} onClick={() => editar(r)}>
-                          Editar
-                        </ActionButton>
-                        {r.status !== "active" ? (
-                          <ActionButton
-                            variant="outline"
-                            size="sm"
-                            icon={<IconCheck size={14} />}
-                            onClick={() => void ativar([r.clinicaId])}
-                          >
-                            Ativar
-                          </ActionButton>
-                        ) : (
-                          <ActionButton
-                            variant="warning"
-                            size="sm"
-                            icon={<IconPause size={14} />}
-                            disabled={r.clinicaId === 1}
-                            onClick={() => void suspender([r.clinicaId])}
-                          >
-                            Suspender
-                          </ActionButton>
-                        )}
-                        <NavLink to="/supervisor/tenants" className="btn btn-outline btn-sm btn-with-icon" title="Gerar licença">
-                          <span className="btn-icon" aria-hidden>
-                            <IconKey size={14} />
-                          </span>
-                          Licença
-                        </NavLink>
-                        {r.clinicaId > 1 ? (
-                          <ActionButton
-                            variant="danger"
-                            size="sm"
-                            icon={<IconTrash size={14} />}
-                            onClick={() => void remover([r.clinicaId])}
-                          >
-                            Remover
-                          </ActionButton>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <div className="card">
-        <h3 className="card-title">
-          {editingId ? `Editar empresa #${editingId}` : "Nova empresa"}
-          {editingId ? (
-            <span className="muted" style={{ fontWeight: 400, fontSize: "0.85rem", marginLeft: 8 }}>
-              · ID Lab fixo
+        {editingRow ? (
+          <div className="tenant-mgmt-bar">
+            <span className="tenant-mgmt-bar-label">
+              Gerenciar <strong>{tenantDisplayName(editingRow)}</strong>
             </span>
-          ) : null}
-        </h3>
+            <div className="tenant-mgmt-bar-actions">
+              {editingRow.status !== "active" ? (
+                <ActionButton
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  icon={<IconCheck size={14} />}
+                  onClick={() => void ativar([editingRow.clinicaId])}
+                >
+                  Ativar
+                </ActionButton>
+              ) : (
+                <ActionButton
+                  variant="warning"
+                  size="sm"
+                  type="button"
+                  icon={<IconPause size={14} />}
+                  disabled={editingRow.clinicaId === 1}
+                  onClick={() => void suspender([editingRow.clinicaId])}
+                >
+                  Suspender
+                </ActionButton>
+              )}
+              <ActionButton
+                variant="outline"
+                size="sm"
+                type="button"
+                icon={<IconKey size={14} />}
+                onClick={() => abrirLicenca(editingRow.clinicaId)}
+              >
+                Licença
+              </ActionButton>
+              {editingRow.clinicaId > 1 ? (
+                <ActionButton
+                  variant="danger"
+                  size="sm"
+                  type="button"
+                  icon={<IconTrash size={14} />}
+                  onClick={() => void remover([editingRow.clinicaId])}
+                >
+                  Remover cadastro
+                </ActionButton>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <form onSubmit={salvar} className="form-grid">
+          <div className="cadastro-acesso-box">
+            <h4 className="cadastro-acesso-title">Acesso ao sistema (administrador do laboratório)</h4>
+            <p className="muted cadastro-acesso-desc">
+              {isNew
+                ? "Obrigatório no cadastro. Perfil administrador apenas nesta empresa — informe o ID Lab na tela de login."
+                : "Deixe a senha em branco para não alterá-la. Preencha usuário/e-mail apenas se for trocar o login."}
+            </p>
+            <div className="form-grid cadastro-acesso-grid">
+              <div className="form-group">
+                <label htmlFor="adminLogin">Usuário (login)</label>
+                <input
+                  id="adminLogin"
+                  value={form.adminLogin}
+                  onChange={(e) => setField("adminLogin", e.target.value)}
+                  autoComplete="off"
+                  placeholder="Ex.: lab.admin"
+                  required={isNew}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="adminSenha">Senha</label>
+                <div className="cadastro-senha-wrap">
+                  <input
+                    id="adminSenha"
+                    type={showSenha ? "text" : "password"}
+                    value={form.adminSenha}
+                    onChange={(e) => setField("adminSenha", e.target.value)}
+                    autoComplete="new-password"
+                    placeholder={isNew ? "Mínimo 6 caracteres" : "Vazio = manter atual"}
+                    required={isNew}
+                    minLength={isNew ? 6 : undefined}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm cadastro-senha-toggle"
+                    onClick={() => setShowSenha((v) => !v)}
+                  >
+                    {showSenha ? "Ocultar" : "Mostrar"}
+                  </button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="adminEmail">E-mail</label>
+                <input
+                  id="adminEmail"
+                  type="email"
+                  value={form.adminEmail}
+                  onChange={(e) => setField("adminEmail", e.target.value)}
+                  autoComplete="email"
+                  placeholder="admin@laboratorio.com.br"
+                  required={isNew}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="form-group full cadastro-section-label">
+            <h4 style={{ margin: 0 }}>Dados comerciais da empresa</h4>
+          </div>
+
           {FIELDS.map((f) => (
             <div key={f.name} className={`form-group${f.full ? " full" : ""}`}>
               <label htmlFor={f.name}>{f.label}</label>
@@ -465,20 +550,195 @@ export default function SupervisorCadastroPage() {
               />
             </div>
           ))}
+
+          {!isNew && editingId !== 1 ? (
+            <div className="form-group">
+              <label htmlFor="tenantStatus">Status da empresa</label>
+              <select
+                id="tenantStatus"
+                value={form.tenantStatus}
+                onChange={(e) => setField("tenantStatus", e.target.value)}
+              >
+                <option value="active">Ativo — acesso liberado</option>
+                <option value="suspended">Suspenso — acesso bloqueado</option>
+              </select>
+            </div>
+          ) : null}
+
           <div className="form-actions full">
             <ActionButton variant="ghost" type="button" onClick={novo}>
-              Limpar
+              {isNew ? "Limpar formulário" : "Nova empresa"}
             </ActionButton>
             <ActionButton
-              variant={editingId ? "primary" : "purple"}
+              variant={isNew ? "purple" : "primary"}
               type="submit"
               icon={<IconSave size={16} />}
               disabled={loading}
             >
-              {loading ? "Salvando…" : editingId ? "Salvar alterações" : "Cadastrar empresa"}
+              {loading ? "Salvando…" : isNew ? "Salvar cadastro" : "Salvar alterações"}
             </ActionButton>
           </div>
         </form>
+      </div>
+
+      <div className="card">
+        <div className="cadastro-toolbar">
+          <h3 className="card-title">Empresas cadastradas ({rows.length})</h3>
+          <div className="cadastro-bulk-actions">
+            <ActionButton
+              variant="outline"
+              size="sm"
+              type="button"
+              icon={<IconCheck size={14} />}
+              disabled={selectedIds.length === 0}
+              onClick={() => void ativar(selectedIds)}
+            >
+              Ativar selecionados
+            </ActionButton>
+            <ActionButton
+              variant="warning"
+              size="sm"
+              type="button"
+              icon={<IconPause size={14} />}
+              disabled={selectedIds.length === 0}
+              onClick={() => void suspender(selectedIds)}
+            >
+              Suspender selecionados
+            </ActionButton>
+            <ActionButton
+              variant="danger"
+              size="sm"
+              type="button"
+              icon={<IconTrash size={14} />}
+              disabled={selectedIds.length === 0}
+              onClick={() => void remover(selectedIds)}
+            >
+              Remover selecionados
+            </ActionButton>
+          </div>
+        </div>
+
+        {rows.length === 0 ? (
+          <p className="muted">Nenhuma empresa cadastrada. Clique em &quot;Nova empresa&quot; acima para começar.</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table cadastro-empresas-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 36 }}>
+                    <input
+                      type="checkbox"
+                      checked={rows.length > 0 && selected.size === rows.length}
+                      onChange={(e) => toggleAll(e.target.checked)}
+                      aria-label="Selecionar todos"
+                    />
+                  </th>
+                  <th>ID Lab</th>
+                  <th>Empresa</th>
+                  <th>Status</th>
+                  <th>Licença</th>
+                  <th className="col-acoes">Gerenciamento</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr
+                    key={r.clinicaId}
+                    className={editingId === r.clinicaId ? "row-selected" : ""}
+                    onDoubleClick={() => editar(r)}
+                    title="Duplo clique para editar"
+                  >
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(r.clinicaId)}
+                        onChange={() => toggleRow(r.clinicaId)}
+                        aria-label={`Selecionar ${tenantDisplayName(r)}`}
+                      />
+                    </td>
+                    <td>
+                      <strong>#{r.clinicaId}</strong>
+                      <div className="muted cadastro-schema-tag">{r.postgresSchema}</div>
+                    </td>
+                    <td>
+                      <strong>{tenantDisplayName(r)}</strong>
+                      <div className="muted" style={{ fontSize: "0.8rem" }}>
+                        {r.clienteCodigo ? `Cód. ${r.clienteCodigo}` : "Sem código ED"}
+                        {r.excellenceClinicaId ? ` · Excellence #${r.excellenceClinicaId}` : ""}
+                      </div>
+                    </td>
+                    <td>{tenantStatusBadge(r.status)}</td>
+                    <td>
+                      <span className={licenseStatusClass(r.licenseStatus)}>{r.licenseStatusLabel}</span>
+                      {r.licenseDaysLeft != null && r.licenseStatus !== "none" ? (
+                        <div className="muted" style={{ fontSize: "0.75rem" }}>
+                          {r.licenseDaysLeft} dias · {r.licenseProduto || "—"}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td className="col-acoes" onClick={(e) => e.stopPropagation()}>
+                      <div className="tenant-mgmt-actions">
+                        <ActionButton
+                          variant={editingId === r.clinicaId ? "primary" : "outline"}
+                          size="sm"
+                          type="button"
+                          icon={<IconEdit size={14} />}
+                          onClick={() => editar(r)}
+                        >
+                          Editar
+                        </ActionButton>
+                        <div className="tenant-mgmt-actions-row">
+                          {r.status !== "active" ? (
+                            <ActionButton
+                              variant="outline"
+                              size="sm"
+                              type="button"
+                              icon={<IconCheck size={14} />}
+                              onClick={() => void ativar([r.clinicaId])}
+                            >
+                              Ativar
+                            </ActionButton>
+                          ) : (
+                            <ActionButton
+                              variant="warning"
+                              size="sm"
+                              type="button"
+                              icon={<IconPause size={14} />}
+                              disabled={r.clinicaId === 1}
+                              onClick={() => void suspender([r.clinicaId])}
+                            >
+                              Suspender
+                            </ActionButton>
+                          )}
+                          <ActionButton
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            icon={<IconKey size={14} />}
+                            onClick={() => abrirLicenca(r.clinicaId)}
+                          >
+                            Licença
+                          </ActionButton>
+                          {r.clinicaId > 1 ? (
+                            <ActionButton
+                              variant="danger"
+                              size="sm"
+                              type="button"
+                              icon={<IconTrash size={14} />}
+                              onClick={() => void remover([r.clinicaId])}
+                            >
+                              Remover
+                            </ActionButton>
+                          ) : null}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </>
   );

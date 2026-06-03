@@ -64,6 +64,22 @@ export async function ensurePlatformSupervisor(pool: Pool, senha: string): Promi
   console.warn("[dental-lab] Supervisor inicial: supervisor / (senha do env) — altere em produção.");
 }
 
+/** Admin de plataforma (integrações Chatwoot, N8N, etc.) — mesmas rotas /supervisor que o supervisor. */
+export async function ensurePlatformAdmin(pool: Pool, senha: string): Promise<void> {
+  const check = await pool.query(`SELECT id FROM ${PLATFORM_SCHEMA}.platform_usuarios WHERE nome = $1`, [
+    "admin",
+  ]);
+  if (check.rowCount && check.rowCount > 0) return;
+
+  const hash = await bcrypt.hash(senha, 10);
+  await pool.query(
+    `INSERT INTO ${PLATFORM_SCHEMA}.platform_usuarios (id, nome, email, senha_hash, perfil)
+     VALUES ($1, 'admin', 'admin@inovatitech.local', $2, 'admin')`,
+    [newId(), hash],
+  );
+  console.warn("[dental-lab] Admin plataforma inicial: admin / (senha do env) — altere em produção.");
+}
+
 export async function changePlatformUserPassword(
   userId: string,
   senhaAtual: string,

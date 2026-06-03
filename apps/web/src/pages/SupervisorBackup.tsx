@@ -5,6 +5,7 @@ import { ActionButton } from "../components/ui/ActionButton";
 import { IconDatabase, IconDownload, IconPlus } from "../components/ui/Icons";
 import { PageHeader } from "../components/ui/PageHeader";
 import { downloadWithAuth } from "../lib/downloadWithAuth";
+import { canAccessSupervisorConsole } from "../lib/auth";
 import { useSession } from "../lib/SessionContext";
 
 function tenantLabel(t: TenantRecord) {
@@ -41,7 +42,7 @@ export default function SupervisorBackupPage() {
     refresh();
   }, []);
 
-  if (perfil && perfil !== "supervisor") {
+  if (perfil && !canAccessSupervisorConsole(perfil)) {
     return <Navigate to="/" replace />;
   }
 

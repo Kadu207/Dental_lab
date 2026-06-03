@@ -270,9 +270,12 @@ export const api = {
     listTenants: () => request<TenantRecord[]>("/supervisor/tenants"),
     listTenantsOverview: () => request<TenantOverview[]>("/supervisor/tenants/overview"),
     getTenant: (clinicaId: number) => request<TenantRecord>(`/supervisor/tenants/${clinicaId}`),
-    createTenant: (data: Partial<TenantRecord>) =>
-      request<TenantRecord>("/supervisor/tenants", { method: "POST", body: JSON.stringify(data) }),
-    updateTenant: (clinicaId: number, data: Partial<TenantRecord>) =>
+    createTenant: (data: Partial<TenantRecord> & TenantBootstrapFields) =>
+      request<TenantRecord & { loginHint?: string; adminLogin?: string }>("/supervisor/tenants", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateTenant: (clinicaId: number, data: Partial<TenantRecord> & Partial<TenantBootstrapFields>) =>
       request<TenantRecord>(`/supervisor/tenants/${clinicaId}`, { method: "PUT", body: JSON.stringify(data) }),
     deleteTenant: (clinicaId: number) =>
       request<{ msg: string }>(`/supervisor/tenants/${clinicaId}`, { method: "DELETE" }),
@@ -558,6 +561,12 @@ export interface TenantBackupLogRecord {
   razaoSocial?: string | null;
   clienteCodigo?: string | null;
 }
+
+export type TenantBootstrapFields = {
+  adminLogin?: string;
+  adminSenha?: string;
+  adminEmail?: string;
+};
 
 export interface TenantRecord {
   clinicaId: number;

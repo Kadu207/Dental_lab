@@ -24,10 +24,16 @@ export function getAuthToken(): string | null {
   );
 }
 
+/** Supervisor ou admin de plataforma (integrações). */
+export function canAccessSupervisorConsole(perfil: string | null): boolean {
+  if (!perfil) return false;
+  if (perfil === "supervisor") return true;
+  return perfil === "admin" && isPlatformUser();
+}
+
 export function getClinicaId(): string | null {
   if (typeof window === "undefined") return null;
-  const user = getLabUser();
-  if (user?.perfil === "supervisor") {
+  if (isPlatformUser()) {
     return localStorage.getItem(SUPERVISOR_TENANT_KEY);
   }
   return (

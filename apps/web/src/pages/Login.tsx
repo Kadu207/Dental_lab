@@ -12,6 +12,7 @@ export default function LoginPage() {
   const location = useLocation();
   const [usuario, setUsuario] = useState("");
   const [senha, setSenha] = useState("");
+  const [clinicaId, setClinicaId] = useState("");
   const [erro, setErro] = useState("");
   const loginState = location.state as { senhaAlterada?: boolean; authErro?: string } | null;
   const [sucesso, setSucesso] = useState(
@@ -39,15 +40,17 @@ export default function LoginPage() {
     setSucesso("");
     setLoading(true);
     try {
-      const data = await api.auth.login(usuario, senha);
+      const cid = clinicaId.trim() ? Number(clinicaId) : undefined;
+      const data = await api.auth.login(usuario, senha, cid);
+      const isPlatform = data.isPlatformUser ?? data.perfil === "supervisor";
       setLabSession({
         token: data.token,
         clinicaId: data.clinicaId,
         nome: data.nome,
         perfil: data.perfil,
-        isPlatformUser: data.isPlatformUser ?? data.perfil === "supervisor",
+        isPlatformUser: isPlatform,
       });
-      navigate(getPostLoginPath(data.perfil), { replace: true });
+      navigate(getPostLoginPath(data.perfil, isPlatform), { replace: true });
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Falha no login");
     } finally {
@@ -77,6 +80,15 @@ export default function LoginPage() {
           autoComplete="current-password"
           required
         />
+        <label className="login-field">
+          <span className="login-field-label">ID da empresa (laboratório)</span>
+          <input
+            value={clinicaId}
+            onChange={(e) => setClinicaId(e.target.value.replace(/\D/g, ""))}
+            inputMode="numeric"
+            placeholder="Obrigatório para clientes — ex.: 2 (supervisor deixa vazio)"
+          />
+        </label>
         <div className="login-forgot-row">
           <Link to="/esqueci-senha" className="login-link">
             Esqueceu a senha?

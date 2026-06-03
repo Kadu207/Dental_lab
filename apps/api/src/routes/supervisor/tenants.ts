@@ -11,6 +11,7 @@ import { requireSupervisor } from "../../auth/rbac.js";
 import { withLabClient } from "../../db/client.js";
 import { createTenant, deleteTenant, getTenant, listTenants, setTenantsStatus, updateTenant } from "../../tenants/registry.js";
 import { parseTenantPayload } from "../../tenants/tenant-fields.js";
+import { parseTenantBootstrap, updateTenantAdminCredentials } from "../../tenants/seed-tenant.js";
 import { listTenantsOverview } from "../../tenants/tenant-overview.js";
 import { syncAllTenantLicensesFromRemote, syncTenantLicenseFromRemote } from "../../licensing/tenant-sync.js";
 
@@ -82,15 +83,29 @@ supervisorTenantsRouter.get("/:clinicaId", async (req, res) => {
 });
 
 supervisorTenantsRouter.post("/", async (req, res) => {
-  const payload = parseTenantPayload(req.body as Record<string, unknown>);
+  const body = req.body as Record<string, unknown>;
+  const payload = parseTenantPayload(body);
+  const bootstrap = parseTenantBootstrap(body);
 
   if (!payload.razaoSocial && !payload.nomeFantasia) {
     return res.status(400).json({ erro: "Informe razaoSocial ou nomeFantasia" });
   }
+  if (!bootstrap?.adminLogin || !bootstrap.adminSenha) {
+    return res.status(400).json({
+      erro: "Informe usuario (adminLogin), senha (adminSenha) e e-mail (adminEmail) para o administrador do laboratório",
+    });
+  }
+  if (!bootstrap.adminEmail) {
+    return res.status(400).json({ erro: "E-mail do administrador (adminEmail) é obrigatório" });
+  }
 
   try {
-    const created = await createTenant(payload);
-    res.status(201).json(created);
+    const created = await createTenant(payload, bootstrap);
+    res.status(201).json({
+      ...created,
+      adminLogin: bootstrap.adminLogin,
+      loginHint: `Login do cliente: usuário "${bootstrap.adminLogin}", ID da empresa ${created.clinicaId} no campo "ID Empresa" da tela de login.`,
+    });
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao criar tenant" });
   }
@@ -229,6 +244,12 @@ supervisorTenantsRouter.put("/:clinicaId", async (req, res) => {
     const merged = { ...current, ...payload };
     const updated = await updateTenant(clinicaId, merged);
     if (!updated) return res.status(404).json({ erro: "Tenant não encontrado" });
+
+    const bootstrap = parseTenantBootstrap(req.body as Record<string, unknown>);
+    if (bootstrap && (bootstrap.adminSenha || bootstrap.adminEmail || bootstrap.adminLogin)) {
+      await updateTenantAdminCredentials(clinicaId, bootstrap);
+    }
+
     res.json(updated);
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao atualizar tenant" });

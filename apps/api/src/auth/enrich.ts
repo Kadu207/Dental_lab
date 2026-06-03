@@ -6,7 +6,8 @@ import { withLabClient } from "../db/client.js";
 
 export async function enrichAuthPermissions(auth: AuthContext): Promise<AuthContext> {
   if (auth.isPlatformUser || isSupervisor(auth.perfil)) {
-    return { ...auth, perfil: "supervisor", permissoes: parsePermissoes(null, "supervisor") };
+    const permissoes = parsePermissoes(null, "supervisor");
+    return { ...auth, permissoes };
   }
 
   if (auth.mode === "embedded") {

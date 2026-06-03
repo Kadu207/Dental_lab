@@ -3,6 +3,9 @@ import { api, type EmpresaData, type EmpresaUnidade } from "../api";
 import { CrudForm, Modal } from "../components";
 import { LicencaLabSection } from "../components/LicencaLabSection";
 
+/** Marcador de layout — redeploy deve conter esta string no bundle (grep empresa-save-bar). */
+export const EMPRESA_FORM_LAYOUT_VERSION = "empresa-form-v2";
+
 const EMPRESA_FIELDS = [
   { name: "razaoSocial", label: "Razão social", full: true },
   { name: "nomeFantasia", label: "Nome fantasia", full: true },
@@ -38,6 +41,7 @@ export default function EmpresaPage() {
   const [modalUnidade, setModalUnidade] = useState(false);
   const [msg, setMsg] = useState("");
   const [erro, setErro] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const load = async () => {
     try {
@@ -58,6 +62,8 @@ export default function EmpresaPage() {
   }, []);
 
   const salvar = async () => {
+    setSaving(true);
+    setErro("");
     try {
       await api.empresa.save(form as Partial<EmpresaData>);
       setMsg("Dados da empresa salvos. Período de teste de 30 dias iniciado na matriz (se ainda não existia).");
@@ -65,6 +71,8 @@ export default function EmpresaPage() {
       await load();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -77,50 +85,76 @@ export default function EmpresaPage() {
   };
 
   return (
-    <>
-      <div className="page-header">
+    <div className="empresa-page" data-layout={EMPRESA_FORM_LAYOUT_VERSION}>
+      <header className="empresa-page-title">
         <h2>Empresa</h2>
-        <button className="btn btn-primary" onClick={salvar}>
-          Salvar cadastro
-        </button>
-      </div>
-      <p className="page-desc">
-        Matriz e filiais possuem licenças distintas. Cada novo cadastro recebe 30 dias de teste; após a venda, insira
-        a chave comercial validada online pelo Gerador de Licenças.
+      </header>
+
+      <p className="page-desc empresa-page-desc">
+        Dados da matriz do laboratório em que você está logado. Para cadastrar uma <strong>nova empresa cliente</strong>{" "}
+        (ambiente isolado), use <strong>Suporte MASTER → Cadastro de clientes</strong> (perfil supervisor).
+        Matriz e filiais possuem licenças distintas; cada unidade pode ter 30 dias de teste.
       </p>
-      {msg && <div className="alert alert-success">{msg}</div>}
-      {erro && <div className="alert alert-error">{erro}</div>}
 
-      <div className="card" style={{ maxWidth: 900 }}>
-        <h3 style={{ marginBottom: 12 }}>Identificação — Matriz</h3>
-        <div className="form-grid">
-          {EMPRESA_FIELDS.map((f) => (
-            <div key={f.name} className={`form-group${f.full ? " full" : ""}`}>
-              <label>{f.label}</label>
-              <input
-                type={f.type ?? "text"}
-                value={form[f.name] ?? ""}
-                onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
+      {msg ? <div className="alert alert-success">{msg}</div> : null}
+      {erro ? <div className="alert alert-error">{erro}</div> : null}
 
-      <div className="card license-card" style={{ maxWidth: 900, marginTop: 16 }}>
-        <h3 style={{ marginBottom: 8 }}>Licenciamento</h3>
+      <section
+        className="card empresa-matriz-card"
+        style={{ maxWidth: 900 }}
+        aria-labelledby="empresa-matriz-heading"
+      >
+        <h3 id="empresa-matriz-heading" className="empresa-section-title">
+          Identificação — Matriz
+        </h3>
+
+        <form
+          id="empresa-matriz-form"
+          className="empresa-matriz-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void salvar();
+          }}
+        >
+          <div className="empresa-matriz-fields form-grid">
+            {EMPRESA_FIELDS.map((f) => (
+              <div key={f.name} className={`form-group${f.full ? " full" : ""}`}>
+                <label htmlFor={`empresa-${f.name}`}>{f.label}</label>
+                <input
+                  id={`empresa-${f.name}`}
+                  type={f.type ?? "text"}
+                  value={form[f.name] ?? ""}
+                  onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="empresa-save-bar" role="group" aria-label="Salvar cadastro da matriz">
+            <p className="empresa-save-hint muted">
+              Revise os dados acima e clique em salvar para gravar a matriz.
+            </p>
+            <button type="submit" className="btn btn-primary empresa-btn-salvar" disabled={saving}>
+              {saving ? "Salvando…" : "Salvar cadastro"}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="card license-card empresa-licenca-card" style={{ maxWidth: 900 }}>
+        <h3 className="empresa-section-title">Licenciamento</h3>
         <LicencaLabSection heading="Matriz (sede)" />
-      </div>
+      </section>
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="page-header" style={{ marginBottom: 8 }}>
-          <h3>Unidades / filiais</h3>
-          <button className="btn btn-outline" onClick={() => setModalUnidade(true)}>
+      <section className="card empresa-unidades-card">
+        <div className="empresa-unidades-head">
+          <h3 className="empresa-section-title">Unidades / filiais</h3>
+          <button type="button" className="btn btn-outline" onClick={() => setModalUnidade(true)}>
             + Nova unidade
           </button>
         </div>
         {unidades.length === 0 ? (
-          <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
+          <p className="muted" style={{ fontSize: "0.9rem" }}>
             Nenhuma filial cadastrada. Cada filial terá licença e teste de 30 dias independentes.
           </p>
         ) : (
@@ -149,13 +183,13 @@ export default function EmpresaPage() {
             </div>
           ))
         )}
-      </div>
+      </section>
 
-      {modalUnidade && (
+      {modalUnidade ? (
         <Modal title="Nova unidade" onClose={() => setModalUnidade(false)}>
           <CrudForm fields={UNIDADE_FIELDS} onSubmit={addUnidade} onCancel={() => setModalUnidade(false)} />
         </Modal>
-      )}
-    </>
+      ) : null}
+    </div>
   );
 }

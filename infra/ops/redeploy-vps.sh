@@ -67,6 +67,10 @@ echo "==> Verificação rápida do checkout"
 git rev-parse --short HEAD
 test -f apps/api/src/db/schema-platform.sql
 test -f apps/web/src/pages/SupervisorTenants.tsx
+grep -q 'empresa-save-bar' apps/web/src/pages/Empresa.tsx || {
+  echo "ERRO: Empresa.tsx sem layout v2 (empresa-save-bar). Faça push do código atualizado."
+  exit 1
+}
 
 echo "==> Docker build + up"
 docker compose -f docker-compose.prod.yml --env-file .env build --no-cache

@@ -172,6 +172,17 @@ export function requirePerfis(...allowed: LabPerfil[]) {
   };
 }
 
+/** Rotas Suporte MASTER: supervisor ou admin de plataforma (integrações). */
 export function requireSupervisor() {
-  return requirePerfis("supervisor");
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.auth) return res.status(401).json({ erro: "Não autenticado" });
+    if (!req.auth.isPlatformUser) {
+      return res.status(403).json({ erro: "Acesso restrito à plataforma", code: "FORBIDDEN" });
+    }
+    const perfil = req.auth.perfil as LabPerfil;
+    if (perfil !== "supervisor" && perfil !== "admin") {
+      return res.status(403).json({ erro: "Perfil sem acesso a este módulo", code: "FORBIDDEN" });
+    }
+    next();
+  };
 }

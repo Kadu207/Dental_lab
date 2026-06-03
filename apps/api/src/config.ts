@@ -67,6 +67,10 @@ export const PLATFORM_SCHEMA = envString("DENTAL_LAB_PLATFORM_SCHEMA", "dental_l
 export const SUPERVISOR_SEED_PASSWORD =
   process.env.DENTAL_LAB_SUPERVISOR_PASSWORD?.trim() || "supervisor123";
 
+/** Admin de plataforma (integrações) — acesso /supervisor com perfil admin */
+export const PLATFORM_ADMIN_SEED_PASSWORD =
+  process.env.DENTAL_LAB_PLATFORM_ADMIN_PASSWORD?.trim() || "admin123";
+
 /** URL pública do frontend (links de recuperação de senha) */
 export const APP_PUBLIC_URL = envString(
   "DENTAL_LAB_APP_URL",

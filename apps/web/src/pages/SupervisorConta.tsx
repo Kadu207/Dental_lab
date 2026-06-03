@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { api } from "../api";
+import { canAccessSupervisorConsole } from "../lib/auth";
 import { useSession } from "../lib/SessionContext";
 
 export default function SupervisorContaPage() {
@@ -12,7 +13,7 @@ export default function SupervisorContaPage() {
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (perfil && perfil !== "supervisor") {
+  if (perfil && !canAccessSupervisorConsole(perfil)) {
     return <Navigate to="/" replace />;
   }
 

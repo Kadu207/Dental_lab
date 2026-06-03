@@ -1,5 +1,7 @@
 /** Rota inicial após login conforme perfil RBAC */
-export function getPostLoginPath(perfil: string): string {
-  if (perfil === "supervisor") return "/supervisor/cadastro";
+export function getPostLoginPath(perfil: string, isPlatformUser?: boolean): string {
+  if (perfil === "supervisor" || (isPlatformUser && perfil === "admin")) {
+    return "/supervisor/cadastro";
+  }
   return "/";
 }

@@ -1408,6 +1408,216 @@ p.muted {
   gap: 8px;
 }
 
+.cadastro-form-panel--focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
+  border-color: #818cf8;
+}
+
+.cadastro-form-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.cadastro-acesso-box {
+  grid-column: 1 / -1;
+  padding: 16px 18px;
+  background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+  border: 2px solid #93c5fd;
+  border-radius: var(--radius);
+}
+
+.cadastro-acesso-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--primary);
+}
+
+.cadastro-acesso-desc {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+}
+
+.cadastro-acesso-grid {
+  margin-bottom: 0;
+}
+
+.cadastro-section-label {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.cadastro-senha-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.cadastro-senha-wrap input {
+  flex: 1;
+}
+
+.cadastro-senha-toggle {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.tenant-mgmt-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius);
+}
+
+.tenant-mgmt-bar-label {
+  font-size: 0.9rem;
+  color: var(--text-muted, #64748b);
+}
+
+.tenant-mgmt-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cadastro-empresas-table .col-acoes {
+  min-width: 200px;
+  vertical-align: top;
+}
+
+.tenant-mgmt-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.tenant-mgmt-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cadastro-schema-tag {
+  font-size: 0.72rem;
+  font-family: ui-monospace, monospace;
+}
+
+/* Empresa — botão Salvar somente após todos os campos da matriz (layout v2) */
+.empresa-page-title {
+  margin-bottom: 8px;
+}
+
+.empresa-page-title h2 {
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Nunca exibir botão de salvar no cabeçalho da página Empresa */
+.empresa-page-title .btn,
+.empresa-page-title button,
+.empresa-page-desc .btn-primary,
+.empresa-page-desc button[type="submit"] {
+  display: none !important;
+}
+
+.empresa-section-title {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empresa-matriz-card {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.empresa-matriz-form {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 0;
+  min-height: 0;
+}
+
+.empresa-matriz-fields {
+  grid-row: 1;
+}
+
+.empresa-save-bar {
+  grid-row: 2;
+  order: 9999;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.empresa-save-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  text-align: right;
+  width: 100%;
+}
+
+.empresa-btn-salvar {
+  flex-shrink: 0;
+}
+
+.empresa-licenca-card {
+  margin-top: 16px;
+}
+
+.empresa-unidades-card {
+  margin-top: 16px;
+}
+
+.empresa-unidades-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.empresa-unidades-head .empresa-section-title {
+  margin-bottom: 0;
+}
+
+/* Cabeçalho legado (outras páginas) — ações à direita, não abaixo do título */
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.page-header h2,
+.page-header h3 {
+  margin: 0;
+}
+
 .btn-warn:not(:disabled) {
   border-color: #f59e0b;
   color: #b45309;
