@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ModalProps {
   title: string;
@@ -6,10 +6,15 @@ interface ModalProps {
   children: React.ReactNode;
 }
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({
+  title,
+  onClose,
+  children,
+  wide,
+}: ModalProps & { wide?: boolean }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className={`modal${wide ? " modal-wide" : ""}`} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ marginBottom: 16 }}>{title}</h3>
         {children}
       </div>
@@ -39,6 +44,12 @@ export function CrudForm({
   onChange,
 }: CrudFormProps & { onChange?: (data: Record<string, string>) => void }) {
   const [data, setData] = useState<Record<string, string>>(initial);
+
+  const initialKey = JSON.stringify(initial);
+  useEffect(() => {
+    setData(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when record identity changes
+  }, [initialKey]);
 
   const patch = (next: Record<string, string>) => {
     setData(next);

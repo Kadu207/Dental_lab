@@ -1196,6 +1196,31 @@ input:focus, select:focus, textarea:focus {
   overflow-y: auto;
 }
 
+.modal-wide {
+  max-width: 920px;
+}
+
+.form-section {
+  border: none;
+  margin: 0 0 20px;
+  padding: 0;
+}
+
+.form-section-title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 12px;
+  padding: 0;
+  width: 100%;
+}
+
+.fornecedor-form .form-section + .form-section {
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
 .modal-actions {
   display: flex;
   gap: 8px;

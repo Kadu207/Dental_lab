@@ -1,65 +1,133 @@
 import { useEffect, useState } from "react";
 import { api, type Fornecedor } from "../api";
-import { CrudForm, Modal } from "../components";
-
-const FIELDS = [
-  { name: "razaoSocial", label: "Razão Social", required: true, full: true },
-  { name: "nomeFantasia", label: "Nome Fantasia" },
-  { name: "cnpj", label: "CNPJ" },
-  { name: "contato", label: "Contato" },
-  { name: "telefone", label: "Telefone" },
-  { name: "email", label: "E-mail", type: "email" },
-  { name: "endereco", label: "Endereço", full: true },
-  { name: "observacoes", label: "Observações", type: "textarea", full: true },
-];
+import { FornecedorForm, fornecedorToForm, type FornecedorFormData } from "../components/FornecedorForm";
+import { Modal } from "../components";
 
 export default function FornecedoresPage() {
   const [items, setItems] = useState<Fornecedor[]>([]);
   const [modal, setModal] = useState<{ mode: "create" | "edit"; item?: Fornecedor } | null>(null);
+  const [form, setForm] = useState<FornecedorFormData>(fornecedorToForm());
+  const [erro, setErro] = useState("");
 
-  const load = () => api.fornecedores.list().then(setItems);
-  useEffect(() => { load(); }, []);
+  const load = () =>
+    api.fornecedores
+      .list()
+      .then(setItems)
+      .catch((e) => setErro(e instanceof Error ? e.message : "Erro ao carregar"));
 
-  const save = async (data: Record<string, string>) => {
-    if (modal?.mode === "edit" && modal.item) {
-      await api.fornecedores.update(modal.item.id, data);
-    } else {
-      await api.fornecedores.create(data);
-    }
-    setModal(null);
+  useEffect(() => {
     load();
+  }, []);
+
+  const openCreate = () => {
+    setForm(fornecedorToForm());
+    setModal({ mode: "create" });
+  };
+
+  const openEdit = (item: Fornecedor) => {
+    setForm(fornecedorToForm(item));
+    setModal({ mode: "edit", item });
+  };
+
+  const save = async (data: FornecedorFormData) => {
+    try {
+      const payload = {
+        razaoSocial: data.razaoSocial.trim(),
+        nomeFantasia: data.nomeFantasia.trim() || undefined,
+        cnpj: data.cnpj.trim() || undefined,
+        contato: data.contato.trim() || undefined,
+        telefone: data.telefone.trim() || undefined,
+        email: data.email.trim() || undefined,
+        endereco: data.endereco.trim() || undefined,
+        observacoes: data.observacoes.trim() || undefined,
+      };
+      if (modal?.mode === "edit" && modal.item) {
+        await api.fornecedores.update(modal.item.id, payload);
+      } else {
+        await api.fornecedores.create(payload);
+      }
+      setModal(null);
+      load();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao salvar");
+    }
   };
 
   return (
     <>
       <div className="page-header">
         <h2>Fornecedores</h2>
-        <button className="btn btn-primary" onClick={() => setModal({ mode: "create" })}>+ Novo Fornecedor</button>
+        <button type="button" className="btn btn-primary" onClick={openCreate}>
+          + Novo fornecedor
+        </button>
       </div>
+      <p className="page-desc">Cadastro completo de fornecedores do laboratório (identificação, contato e endereço).</p>
+      {erro ? <div className="alert alert-error">{erro}</div> : null}
+
       <div className="card">
         <table>
           <thead>
-            <tr><th>Razão Social</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>Ações</th></tr>
+            <tr>
+              <th>Razão social</th>
+              <th>Nome fantasia</th>
+              <th>CNPJ</th>
+              <th>Contato</th>
+              <th>Telefone</th>
+              <th>E-mail</th>
+              <th>Ações</th>
+            </tr>
           </thead>
           <tbody>
             {items.map((f) => (
               <tr key={f.id}>
                 <td>{f.razaoSocial}</td>
+                <td>{f.nomeFantasia ?? "—"}</td>
                 <td>{f.cnpj ?? "—"}</td>
                 <td>{f.contato ?? "—"}</td>
                 <td>{f.telefone ?? "—"}</td>
+                <td>{f.email ?? "—"}</td>
                 <td className="actions">
-                  <button className="btn btn-outline" onClick={() => setModal({ mode: "edit", item: f })}>Editar</button>
-                  <button className="btn btn-danger" onClick={async () => { if (confirm("Excluir?")) { await api.fornecedores.remove(f.id); load(); } }}>Excluir</button>
+                  <button type="button" className="btn btn-outline" onClick={() => openEdit(f)}>
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={async () => {
+                      if (!confirm("Excluir este fornecedor?")) return;
+                      await api.fornecedores.remove(f.id);
+                      load();
+                    }}
+                  >
+                    Excluir
+                  </button>
                 </td>
               </tr>
             ))}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ textAlign: "center", color: "var(--muted)" }}>
+                  Nenhum fornecedor cadastrado
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
+
       {modal && (
-        <Modal title={modal.mode === "create" ? "Novo Fornecedor" : "Editar Fornecedor"} onClose={() => setModal(null)}>
-          <CrudForm fields={FIELDS} initial={modal.item as unknown as Record<string, string>} onSubmit={save} onCancel={() => setModal(null)} />
+        <Modal
+          title={modal.mode === "create" ? "Novo fornecedor" : "Editar fornecedor"}
+          wide
+          onClose={() => setModal(null)}
+        >
+          <FornecedorForm
+            value={form}
+            onChange={setForm}
+            onSubmit={save}
+            onCancel={() => setModal(null)}
+            submitLabel={modal.mode === "create" ? "Cadastrar" : "Salvar alterações"}
+          />
         </Modal>
       )}
     </>
