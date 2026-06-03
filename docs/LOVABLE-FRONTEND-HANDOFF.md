@@ -280,4 +280,11 @@ Trocar senhas após primeiro acesso (`docs/POS-DEPLOY-VPS.md`).
 
 ---
 
-*Última atualização: commit pós `732e0d3` — layout Outfit/DM Sans + ActionButton.*
+---
+
+## 14. Ver também
+
+- Índice geral: `docs/LOVABLE-INDEX.md`
+- Login e RBAC: `docs/LOVABLE-AUTH-RBAC-HANDOFF.md`
+
+*Última atualização: commit `0cbb241` — supervisor + tenant (fornecedores em seções).*
