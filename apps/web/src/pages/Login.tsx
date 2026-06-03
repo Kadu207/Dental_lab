@@ -5,7 +5,6 @@ import { IS_EMBEDDED, setLabSession } from "../lib/auth";
 import { getPostLoginPath } from "../lib/auth-routes";
 import { LoginShell } from "../components/LoginShell";
 import { PasswordField } from "../components/auth/PasswordField";
-import { RbacRoleHints } from "../components/auth/RbacRoleHints";
 import { IconLogIn } from "../components/ui/Icons";
 
 export default function LoginPage() {
@@ -57,43 +56,40 @@ export default function LoginPage() {
   }
 
   return (
-    <LoginShell wide>
-      <div className="login-layout">
-        <form className="login-card login-card-glass" onSubmit={onSubmit}>
-          <h2>Acesso ao sistema</h2>
-          <p className="login-sub">Autenticação com perfil RBAC — laboratório e console supervisor</p>
-          <label className="login-field">
-            <span className="login-field-label">Usuário</span>
-            <input
-              value={usuario}
-              onChange={(e) => setUsuario(e.target.value)}
-              autoComplete="username"
-              required
-              placeholder="ex.: admin ou supervisor"
-            />
-          </label>
-          <PasswordField
-            label="Senha"
-            value={senha}
-            onChange={setSenha}
-            autoComplete="current-password"
+    <LoginShell>
+      <form className="login-card login-card-glass" onSubmit={onSubmit}>
+        <h2>Acesso ao sistema</h2>
+        <p className="login-sub">Laboratório odontológico e gestão de próteses</p>
+        <label className="login-field">
+          <span className="login-field-label">Usuário</span>
+          <input
+            value={usuario}
+            onChange={(e) => setUsuario(e.target.value)}
+            autoComplete="username"
             required
+            placeholder="ex.: admin ou supervisor"
           />
-          <div className="login-forgot-row">
-            <Link to="/esqueci-senha" className="login-link">
-              Esqueceu a senha?
-            </Link>
-          </div>
-          {sucesso ? <p className="login-success">{sucesso}</p> : null}
-          {authErroInicial && !erro ? <p className="login-erro">{authErroInicial}</p> : null}
-          {erro ? <p className="login-erro">{erro}</p> : null}
-          <button type="submit" className="login-submit" disabled={loading}>
-            <IconLogIn size={18} />
-            {loading ? "Entrando…" : "Entrar"}
-          </button>
-        </form>
-        <RbacRoleHints />
-      </div>
+        </label>
+        <PasswordField
+          label="Senha"
+          value={senha}
+          onChange={setSenha}
+          autoComplete="current-password"
+          required
+        />
+        <div className="login-forgot-row">
+          <Link to="/esqueci-senha" className="login-link">
+            Esqueceu a senha?
+          </Link>
+        </div>
+        {sucesso ? <p className="login-success">{sucesso}</p> : null}
+        {authErroInicial && !erro ? <p className="login-erro">{authErroInicial}</p> : null}
+        {erro ? <p className="login-erro">{erro}</p> : null}
+        <button type="submit" className="login-submit" disabled={loading}>
+          <IconLogIn size={18} />
+          {loading ? "Entrando…" : "Entrar"}
+        </button>
+      </form>
     </LoginShell>
   );
 }

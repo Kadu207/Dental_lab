@@ -1,22 +1,21 @@
 import { useEffect, useState } from "react";
 import { api, type Colaborador, type UsuarioPermissao } from "../api";
 import { CrudForm, Modal } from "../components";
+import { RbacPerfilPoliticas } from "../components/auth/RbacPerfilPoliticas";
 import { IS_EMBEDDED } from "../lib/auth";
-
-const PERFIS = [
-  { value: "admin", label: "Administrador" },
-  { value: "gestor", label: "Gestor" },
-  { value: "recepcao", label: "Recepção" },
-  { value: "colaborador", label: "Colaborador" },
-  { value: "laboratorio", label: "Laboratório" },
-  { value: "estagiario", label: "Estagiário" },
-];
+import { getPerfilPolitica, TENANT_PERFIL_OPTIONS } from "../lib/rbac-perfis";
 
 const FIELDS_CREATE = [
   { name: "nome", label: "Nome", required: true },
   { name: "email", label: "E-mail", type: "email" },
   { name: "senha", label: "Senha", required: true, type: "password" },
-  { name: "perfil", label: "Perfil / hierarquia", required: true, type: "select", options: PERFIS },
+  {
+    name: "perfil",
+    label: "Perfil / hierarquia",
+    required: true,
+    type: "select",
+    options: TENANT_PERFIL_OPTIONS,
+  },
   { name: "descricao", label: "Função / observações", full: true },
 ];
 
@@ -24,17 +23,39 @@ const FIELDS_EDIT = FIELDS_CREATE.filter((f) => f.name !== "senha").concat([
   { name: "senha", label: "Nova senha (opcional)", type: "password" },
 ]);
 
+function PerfilSelecionadoHint({ perfilId }: { perfilId: string }) {
+  const p = getPerfilPolitica(perfilId);
+  if (!p) return null;
+  return (
+    <p className="rbac-perfil-hint">
+      <strong>{p.label}:</strong> {p.desc}
+    </p>
+  );
+}
+
 export default function ColaboradoresPage() {
   const [items, setItems] = useState<Colaborador[]>([]);
   const [modal, setModal] = useState<"create" | "edit" | "perm" | null>(null);
   const [atual, setAtual] = useState<Colaborador | null>(null);
   const [permRaw, setPermRaw] = useState("[]");
+  const [formPerfil, setFormPerfil] = useState("");
   const [erro, setErro] = useState("");
 
   const load = () => api.usuarios.list().then(setItems).catch((e) => setErro(e.message));
   useEffect(() => {
     load();
   }, []);
+
+  const openCreate = () => {
+    setFormPerfil("");
+    setModal("create");
+  };
+
+  const openEdit = (c: Colaborador) => {
+    setAtual(c);
+    setFormPerfil(c.perfil);
+    setModal("edit");
+  };
 
   const saveCreate = async (data: Record<string, string>) => {
     await api.usuarios.create({
@@ -84,7 +105,7 @@ export default function ColaboradoresPage() {
       <div className="page-header">
         <h2>Colaboradores</h2>
         {!IS_EMBEDDED && (
-          <button className="btn btn-primary" onClick={() => setModal("create")}>
+          <button className="btn btn-primary" onClick={openCreate}>
             + Novo colaborador
           </button>
         )}
@@ -97,9 +118,15 @@ export default function ColaboradoresPage() {
       <p className="page-desc">
         {IS_EMBEDDED
           ? "Lista sincronizada com os usuários do Excellence Dental (somente leitura neste módulo)."
-          : "Equipe com perfil hierárquico e políticas de acesso (RBAC)."}
+          : "Cadastro da equipe com perfil hierárquico e políticas de acesso (RBAC)."}
       </p>
       {erro && <div className="alert alert-error">{erro}</div>}
+
+      {!IS_EMBEDDED && (
+        <div style={{ marginBottom: 20 }}>
+          <RbacPerfilPoliticas selectedPerfil={formPerfil || undefined} />
+        </div>
+      )}
 
       <div className="card">
         <table>
@@ -107,60 +134,62 @@ export default function ColaboradoresPage() {
             <tr>
               <th>Nome</th>
               <th>E-mail</th>
-              <th>Perfil ERP</th>
+              <th>Perfil</th>
               {!IS_EMBEDDED && <th>Ativo</th>}
               {!IS_EMBEDDED && <th>Ações</th>}
             </tr>
           </thead>
           <tbody>
-            {items.map((c) => (
-              <tr key={c.id}>
-                <td>{c.nome}</td>
-                <td>{c.email ?? "—"}</td>
-                <td>
-                  <span className="badge badge-recebido">{c.perfil}</span>
-                  {c.perfilLab && c.perfilLab !== c.perfil && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--muted)", marginLeft: 6 }}>
-                      → lab: {c.perfilLab}
-                    </span>
-                  )}
-                </td>
-                {!IS_EMBEDDED && <td>{c.ativo ? "Sim" : "Não"}</td>}
-                {!IS_EMBEDDED && (
-                  <td className="actions">
-                    <button
-                      className="btn btn-outline"
-                      onClick={() => {
-                        setAtual(c);
-                        setModal("edit");
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="btn btn-outline"
-                      onClick={() => {
-                        setAtual(c);
-                        setPermRaw(JSON.stringify(c.permissoes ?? [], null, 2));
-                        setModal("perm");
-                      }}
-                    >
-                      Políticas
-                    </button>
-                    <button
-                      className="btn btn-danger"
-                      onClick={async () => {
-                        if (!confirm("Excluir colaborador?")) return;
-                        await api.usuarios.remove(c.id);
-                        load();
-                      }}
-                    >
-                      Excluir
-                    </button>
+            {items.map((c) => {
+              const pol = getPerfilPolitica(c.perfil);
+              return (
+                <tr key={c.id}>
+                  <td>{c.nome}</td>
+                  <td>{c.email ?? "—"}</td>
+                  <td>
+                    <span className="badge badge-recebido">{pol?.label ?? c.perfil}</span>
+                    {pol && (
+                      <span style={{ display: "block", fontSize: "0.75rem", color: "var(--muted)", marginTop: 4 }}>
+                        {pol.desc}
+                      </span>
+                    )}
+                    {c.perfilLab && c.perfilLab !== c.perfil && (
+                      <span style={{ fontSize: "0.75rem", color: "var(--muted)", marginLeft: 6 }}>
+                        → lab: {c.perfilLab}
+                      </span>
+                    )}
                   </td>
-                )}
-              </tr>
-            ))}
+                  {!IS_EMBEDDED && <td>{c.ativo ? "Sim" : "Não"}</td>}
+                  {!IS_EMBEDDED && (
+                    <td className="actions">
+                      <button className="btn btn-outline" onClick={() => openEdit(c)}>
+                        Editar
+                      </button>
+                      <button
+                        className="btn btn-outline"
+                        onClick={() => {
+                          setAtual(c);
+                          setPermRaw(JSON.stringify(c.permissoes ?? [], null, 2));
+                          setModal("perm");
+                        }}
+                      >
+                        Políticas
+                      </button>
+                      <button
+                        className="btn btn-danger"
+                        onClick={async () => {
+                          if (!confirm("Excluir colaborador?")) return;
+                          await api.usuarios.remove(c.id);
+                          load();
+                        }}
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
             {items.length === 0 && (
               <tr>
                 <td colSpan={IS_EMBEDDED ? 3 : 5} style={{ textAlign: "center", color: "#64748b" }}>
@@ -174,7 +203,13 @@ export default function ColaboradoresPage() {
 
       {modal === "create" && (
         <Modal title="Novo colaborador" onClose={() => setModal(null)}>
-          <CrudForm fields={FIELDS_CREATE} onSubmit={saveCreate} onCancel={() => setModal(null)} />
+          <CrudForm
+            fields={FIELDS_CREATE}
+            onChange={(d) => setFormPerfil(d.perfil ?? "")}
+            onSubmit={saveCreate}
+            onCancel={() => setModal(null)}
+          />
+          <PerfilSelecionadoHint perfilId={formPerfil} />
         </Modal>
       )}
       {modal === "edit" && atual && (
@@ -187,15 +222,18 @@ export default function ColaboradoresPage() {
               perfil: atual.perfil,
               descricao: atual.descricao ?? "",
             }}
+            onChange={(d) => setFormPerfil(d.perfil ?? "")}
             onSubmit={saveEdit}
             onCancel={() => setModal(null)}
           />
+          <PerfilSelecionadoHint perfilId={formPerfil} />
         </Modal>
       )}
       {modal === "perm" && atual && (
         <Modal title={`Políticas — ${atual.nome}`} onClose={() => setModal(null)}>
           <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: 8 }}>
-            JSON: resource (ex: financeiro, proteses) e actions: read, write, delete.
+            Sobrescreve o padrão do perfil <strong>{atual.perfil}</strong>. JSON: resource (ex:
+            financeiro, proteses) e actions: read, write, delete.
           </p>
           <textarea
             rows={12}

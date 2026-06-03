@@ -75,23 +75,6 @@
   gap: 20px;
 }
 
-.login-panel-wide {
-  max-width: 920px;
-}
-
-.login-layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-  width: 100%;
-}
-
-@media (min-width: 768px) {
-  .login-layout {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
-}
 
 .login-brand {
   justify-content: center;
@@ -234,41 +217,58 @@
   gap: 8px;
 }
 
-.login-rbac-hints {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 14px;
-  padding: 20px 22px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
-  backdrop-filter: blur(6px);
+.rbac-politicas-card {
+  margin-bottom: 0;
 }
 
-.login-rbac-title {
+.rbac-politicas-title {
   font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--primary);
-  margin-bottom: 12px;
+  margin-bottom: 4px;
 }
 
-.login-rbac-list {
+.rbac-politicas-list {
   list-style: none;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 10px;
   margin: 0;
   padding: 0;
 }
 
-.login-rbac-list li {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+@media (min-width: 640px) {
+  .rbac-politicas-list {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
-.login-rbac-badge {
+@media (min-width: 1024px) {
+  .rbac-politicas-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.rbac-politicas-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.rbac-politicas-item.is-selected {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  box-shadow: 0 0 0 1px #c4b5fd;
+}
+
+.rbac-politicas-badge {
   display: inline-block;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: #5b21b6;
   background: #ede9fe;
@@ -277,10 +277,26 @@
   width: fit-content;
 }
 
-.login-rbac-desc {
-  font-size: 0.78rem;
+.rbac-politicas-desc {
+  font-size: 0.8rem;
   color: var(--muted);
-  line-height: 1.35;
+  line-height: 1.4;
+}
+
+.rbac-politicas-note {
+  font-size: 0.72rem;
+  color: #b45309;
+  font-style: italic;
+}
+
+.rbac-perfil-hint {
+  margin-top: 12px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  color: var(--primary);
+  background: #f0f9ff;
+  border-radius: var(--radius);
+  border: 1px solid #bae6fd;
 }
 
 .login-erro {

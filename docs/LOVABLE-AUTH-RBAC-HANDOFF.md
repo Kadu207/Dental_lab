@@ -10,7 +10,8 @@ Relacionado: `docs/LOVABLE-FRONTEND-HANDOFF.md` (console supervisor).
 
 | Tela | Rota | Função |
 |------|------|--------|
-| Login RBAC | `/login` | Usuário + senha, toggle mostrar senha, redirect por perfil |
+| Login | `/login` | Usuário + senha, toggle mostrar senha, redirect por perfil (sem painel RBAC) |
+| Colaboradores | `/colaboradores` | Cadastro + card **Perfis com RBAC** + políticas por usuário |
 | Esqueci senha | `/esqueci-senha` | Valida usuário+e-mail, dispara e-mail com link |
 | Redefinir senha | `/redefinir-senha?token=...` | Nova senha + confirmar (token na URL ou state) |
 
@@ -23,7 +24,7 @@ Relacionado: `docs/LOVABLE-FRONTEND-HANDOFF.md` (console supervisor).
 - Fontes: **Outfit** (títulos), **DM Sans** (corpo)
 - Card glass sobre fundo `login-bg.jpg` + overlay gradiente
 - Botão primário com ícone (Lucide: `LogIn`, `Mail`, `Save`, `Eye`, `EyeOff`)
-- Painel lateral **Perfis com RBAC** na tela de login (grid 2 colunas em desktop)
+- Card **Perfis com RBAC** em `/colaboradores` e `/grupos` (não no login)
 - Cores: roxo `#7c3aed`, primário `#0f172a`, muted `#64748b`
 
 ---
@@ -197,7 +198,10 @@ DENTAL_LAB_PASSWORD_RESET_EXPOSE_TOKEN=false
 
 | Arquivo | Uso |
 |---------|-----|
-| `apps/web/src/pages/Login.tsx` | Form + RBAC hints |
+| `apps/web/src/pages/Login.tsx` | Form login (sem RBAC lateral) |
+| `apps/web/src/pages/Colaboradores.tsx` | Cadastro + políticas RBAC |
+| `apps/web/src/components/auth/RbacPerfilPoliticas.tsx` | Card perfis |
+| `apps/web/src/lib/rbac-perfis.ts` | Labels e descrições |
 | `apps/web/src/pages/EsqueciSenha.tsx` | Solicitação + feedback e-mail |
 | `apps/web/src/pages/RedefinirSenha.tsx` | Token via query `?token=` |
 | `apps/web/src/components/auth/PasswordField.tsx` | Input senha + olho |
@@ -216,7 +220,7 @@ Crie o fluxo de autenticação Dental Lab (React + TypeScript + Tailwind):
    Campos: usuário, senha com botão mostrar/ocultar (ícone olho).
    Link "Esqueceu a senha?" → /esqueci-senha.
    Botão "Entrar" com ícone.
-   Ao lado (desktop): painel "Perfis com RBAC" listando Supervisor, Admin, Gestor, etc.
+   Não exibir perfis RBAC no login — apenas em Colaboradores/Grupos.
    POST /api/auth/login body { usuario, senha }.
    Salvar token em localStorage lab_token, lab_user, lab_clinica_id.
    Redirect: supervisor → /supervisor/cadastro; demais → /.

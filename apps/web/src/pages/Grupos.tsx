@@ -3,14 +3,10 @@ import { api, type Colaborador, type GrupoAtribuicao, type UsuarioPermissao } fr
 import { IS_EMBEDDED } from "../lib/auth";
 import { canAccess } from "../lib/permissions";
 
-const PERFIS = [
-  { value: "admin", label: "Administrador" },
-  { value: "gestor", label: "Gestor" },
-  { value: "recepcao", label: "Recepção" },
-  { value: "colaborador", label: "Colaborador" },
-  { value: "laboratorio", label: "Laboratório" },
-  { value: "estagiario", label: "Estagiário" },
-];
+import { RbacPerfilPoliticas } from "../components/auth/RbacPerfilPoliticas";
+import { getPerfilPolitica, TENANT_PERFIL_OPTIONS } from "../lib/rbac-perfis";
+
+const PERFIS = TENANT_PERFIL_OPTIONS;
 
 export default function GruposPage() {
   const [me, setMe] = useState<{
@@ -81,6 +77,12 @@ export default function GruposPage() {
         </div>
       )}
 
+      {!IS_EMBEDDED && (
+        <div style={{ marginBottom: 20 }}>
+          <RbacPerfilPoliticas selectedPerfil={role} tenantOnly />
+        </div>
+      )}
+
       {podeEscrever && (
         <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginBottom: 12 }}>Atribuir perfil no módulo lab</h3>
@@ -108,6 +110,11 @@ export default function GruposPage() {
                   </option>
                 ))}
               </select>
+              {getPerfilPolitica(role) && (
+                <p className="rbac-perfil-hint" style={{ marginTop: 6 }}>
+                  {getPerfilPolitica(role)!.desc}
+                </p>
+              )}
             </div>
           </div>
           <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={atribuir}>

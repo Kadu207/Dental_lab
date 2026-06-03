@@ -31,8 +31,19 @@ interface CrudFormProps {
   onCancel: () => void;
 }
 
-export function CrudForm({ fields, initial = {}, onSubmit, onCancel }: CrudFormProps) {
+export function CrudForm({
+  fields,
+  initial = {},
+  onSubmit,
+  onCancel,
+  onChange,
+}: CrudFormProps & { onChange?: (data: Record<string, string>) => void }) {
   const [data, setData] = useState<Record<string, string>>(initial);
+
+  const patch = (next: Record<string, string>) => {
+    setData(next);
+    onChange?.(next);
+  };
 
   return (
     <form
@@ -49,13 +60,13 @@ export function CrudForm({ fields, initial = {}, onSubmit, onCancel }: CrudFormP
               <textarea
                 rows={3}
                 value={data[f.name] ?? ""}
-                onChange={(e) => setData({ ...data, [f.name]: e.target.value })}
+                onChange={(e) => patch({ ...data, [f.name]: e.target.value })}
               />
             ) : f.type === "select" && f.options ? (
               <select
                 required={f.required}
                 value={data[f.name] ?? ""}
-                onChange={(e) => setData({ ...data, [f.name]: e.target.value })}
+                onChange={(e) => patch({ ...data, [f.name]: e.target.value })}
               >
                 <option value="">Selecione…</option>
                 {f.options.map((o) => (
@@ -69,7 +80,7 @@ export function CrudForm({ fields, initial = {}, onSubmit, onCancel }: CrudFormP
                 type={f.type ?? "text"}
                 required={f.required}
                 value={data[f.name] ?? ""}
-                onChange={(e) => setData({ ...data, [f.name]: e.target.value })}
+                onChange={(e) => patch({ ...data, [f.name]: e.target.value })}
               />
             )}
           </div>
