@@ -8,7 +8,7 @@ import {
 } from "../auth/password-reset.js";
 import { sendPasswordResetEmail, isMailConfigured } from "../mail/mailer.js";
 import { APP_PUBLIC_URL, PASSWORD_RESET_EXPOSE_TOKEN } from "../config.js";
-import { loginStandalone } from "../auth/standalone.js";
+import { loginStandaloneResolved } from "../auth/standalone.js";
 import { loginPlatformUser } from "../auth/platform.js";
 import { withLabClient } from "../db/client.js";
 import { ensureDefaultEmpresaAndTrial } from "../licensing/service.js";
@@ -66,11 +66,13 @@ authRouter.post("/login", async (req, res) => {
       });
     }
 
-    const cid = Number(clinicaId ?? 1);
-    const result = await withLabClient(cid, async (db) => {
-      const login = await loginStandalone(db, usuario, senha, cid);
-      await ensureDefaultEmpresaAndTrial(db, cid);
-      return login;
+    const explicitCid =
+      clinicaId != null && Number.isFinite(Number(clinicaId)) && Number(clinicaId) > 0
+        ? Number(clinicaId)
+        : undefined;
+    const result = await loginStandaloneResolved(usuario, senha, explicitCid);
+    await withLabClient(result.auth.clinicaId, async (db) => {
+      await ensureDefaultEmpresaAndTrial(db, result.auth.clinicaId);
     });
     res.json({
       token: result.token,

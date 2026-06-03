@@ -474,7 +474,7 @@ export default function SupervisorCadastroPage() {
             <h4 className="cadastro-acesso-title">Acesso ao sistema (administrador do laboratório)</h4>
             <p className="muted cadastro-acesso-desc">
               {isNew
-                ? "Obrigatório no cadastro. Perfil administrador apenas nesta empresa — informe o ID Lab na tela de login."
+                ? "Obrigatório no cadastro. Perfil administrador apenas nesta empresa — o cliente entra com este usuário e senha na tela de login."
                 : "Deixe a senha em branco para não alterá-la. Preencha usuário/e-mail apenas se for trocar o login."}
             </p>
             <div className="form-grid cadastro-acesso-grid">

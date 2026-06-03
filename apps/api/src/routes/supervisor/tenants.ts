@@ -104,7 +104,7 @@ supervisorTenantsRouter.post("/", async (req, res) => {
     res.status(201).json({
       ...created,
       adminLogin: bootstrap.adminLogin,
-      loginHint: `Login do cliente: usuário "${bootstrap.adminLogin}", ID da empresa ${created.clinicaId} no campo "ID Empresa" da tela de login.`,
+      loginHint: `Acesso do cliente: usuário "${bootstrap.adminLogin}" e a senha definida no cadastro.`,
     });
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao criar tenant" });
