@@ -194,3 +194,12 @@ CREATE TABLE IF NOT EXISTS dental_lab.grupos_permissoes (
   UNIQUE (clinica_id, user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_lab_grupos_clinica ON dental_lab.grupos_permissoes (clinica_id);
+
+CREATE TABLE IF NOT EXISTS dental_lab.odontograma (
+  clinica_id INTEGER NOT NULL,
+  paciente_id TEXT NOT NULL,
+  dentes TEXT NOT NULL DEFAULT '[]',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (clinica_id, paciente_id)
+);
+CREATE INDEX IF NOT EXISTS idx_lab_odontograma_clinica ON dental_lab.odontograma (clinica_id);

@@ -20,6 +20,7 @@ import RedefinirSenhaPage from "./pages/RedefinirSenha";
 import { BrandLogo } from "./components/BrandLogo";
 import Dashboard from "./pages/Dashboard";
 import ClientesPage from "./pages/Clientes";
+import OdontogramaPage from "./pages/Odontograma";
 import FornecedoresPage from "./pages/Fornecedores";
 import EstoquePage from "./pages/Estoque";
 import ProtesesPage from "./pages/Proteses";
@@ -51,6 +52,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/empresa", label: "Empresa", resource: "empresa" },
       { to: "/clientes", label: "Pacientes", resource: "clientes" },
+      { to: "/odontograma", label: "Odontograma", resource: "odontograma" },
       { to: "/colaboradores", label: "Colaboradores", resource: "colaboradores", standaloneOnly: true },
       { to: "/fornecedores", label: "Fornecedores", resource: "fornecedores" },
     ],
@@ -188,6 +190,7 @@ function AppShell() {
           <Route path="/supervisor/conta" element={<SupervisorContaPage />} />
           <Route path="/laboratorio" element={<LaboratorioPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
+          <Route path="/odontograma" element={<OdontogramaPage />} />
           <Route path="/fornecedores" element={<FornecedoresPage />} />
           <Route path="/estoque" element={<EstoquePage />} />
           <Route path="/proteses" element={<ProtesesPage />} />

@@ -103,6 +103,17 @@ export const api = {
     update: (id: string, d: Partial<Cliente>) => request<Cliente>(`/clientes/${id}`, { method: "PUT", body: JSON.stringify(d) }),
     remove: (id: string) => request<void>(`/clientes/${id}`, { method: "DELETE" }),
   },
+  odontograma: {
+    get: (pacienteId: string) =>
+      request<{ pacienteId: string; dentes: OdontogramaDente[]; updatedAt: string | null }>(
+        `/odontograma/${encodeURIComponent(pacienteId)}`,
+      ),
+    save: (pacienteId: string, dentes: OdontogramaDente[]) =>
+      request<{ pacienteId: string; dentes: OdontogramaDente[]; updatedAt: string }>(
+        `/odontograma/${encodeURIComponent(pacienteId)}`,
+        { method: "PUT", body: JSON.stringify({ dentes }) },
+      ),
+  },
   fornecedores: {
     list: () => request<Fornecedor[]>("/fornecedores"),
     create: (d: Partial<Fornecedor>) => request<Fornecedor>("/fornecedores", { method: "POST", body: JSON.stringify(d) }),
@@ -320,6 +331,12 @@ export interface Cliente {
   email?: string;
   endereco?: string;
   observacoes?: string;
+}
+
+export interface OdontogramaDente {
+  fdi: number;
+  condition: string;
+  note?: string;
 }
 
 export interface Fornecedor {

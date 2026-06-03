@@ -38,7 +38,7 @@ export class LabDbClient {
   private qualify(sql: string): string {
     if (this.driver !== "postgres") return sql;
     return sql.replace(
-      /\b(clientes|fornecedores|estoque|proteses|status_historico|config|lab_usuarios|empresa|empresa_unidades|financeiro|procedimentos|grupos_permissoes|product_licenses)\b/g,
+      /\b(clientes|fornecedores|estoque|proteses|status_historico|config|lab_usuarios|empresa|empresa_unidades|financeiro|procedimentos|grupos_permissoes|product_licenses|odontograma)\b/g,
       `${this.pgSchema}.$1`,
     );
   }

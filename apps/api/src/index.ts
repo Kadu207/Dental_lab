@@ -16,6 +16,7 @@ import { empresaRouter } from "./routes/empresa.js";
 import { financeiroRouter } from "./routes/financeiro.js";
 import { procedimentosRouter } from "./routes/procedimentos.js";
 import { gruposRouter } from "./routes/grupos.js";
+import { odontogramaRouter } from "./routes/odontograma.js";
 import { supervisorTenantsRouter } from "./routes/supervisor/tenants.js";
 import { supervisorAccountRouter } from "./routes/supervisor/account.js";
 import { supervisorBackupRouter, supervisorBackupNewRouter } from "./routes/supervisor/backup.js";
@@ -188,6 +189,9 @@ app.get("/api/etiquetas/teste-impressao", requirePolicy("config", "read"), async
 });
 
 app.use("/api/clientes", clientesRouter);
+app.use("/api/pacientes", clientesRouter);
+app.use("/api/colaboradores", usuariosRouter);
+app.use("/api/odontograma", odontogramaRouter);
 app.use("/api/fornecedores", fornecedoresRouter);
 app.use("/api/estoque", estoqueRouter);
 app.use("/api/proteses", protesesRouter);

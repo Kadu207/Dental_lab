@@ -238,6 +238,14 @@ function initSqliteSchema(db: Database.Database) {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE (clinica_id, user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS odontograma (
+      clinica_id INTEGER NOT NULL,
+      paciente_id TEXT NOT NULL,
+      dentes TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (clinica_id, paciente_id)
+    );
   `);
   migrateSqliteClinicaId(db);
   for (const col of ["erp_paciente_id"]) {
