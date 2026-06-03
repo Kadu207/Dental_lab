@@ -6,12 +6,13 @@
     "dev": "vite",
     "build": "npx tsc -b && npx vite build",
     "build:embedded": "npx tsc -b && npx vite build --mode embedded",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:odontograma-pdf": "node scripts/test-odontograma-pdf.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.0",
     "@react-three/fiber": "^9.0.0",
-    "jspdf": "^2.5.2",
+    "jspdf": "^4.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1",

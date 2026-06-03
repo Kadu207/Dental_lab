@@ -1,3 +1,4 @@
+/** Browser-only: jsPDF 4.x (sem leitura de paths locais; CVE dompurify resolvido). */
 import { jsPDF } from "jspdf";
 import { CONDITION_MAP, type ToothState } from "./odontograma";
 
