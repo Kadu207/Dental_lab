@@ -85,6 +85,12 @@ Validação automatizada:
 pwsh ./infra/ops/smoke-standalone.ps1 -BaseUrl http://127.0.0.1:9180
 ```
 
+Validação de isolamento de tenant por `clinica_id`:
+
+```powershell
+pwsh ./scripts/tenant_clinica_smoke.ps1
+```
+
 ## Documentação
 
 | Arquivo | Conteúdo |
@@ -93,6 +99,7 @@ pwsh ./infra/ops/smoke-standalone.ps1 -BaseUrl http://127.0.0.1:9180
 | [INTEGRATION.md](./INTEGRATION.md) | Standalone vs embedded |
 | [EXCELLENCE-FASE4.md](./EXCELLENCE-FASE4.md) | Checklist integração Excellence |
 | [PRODUCAO-CHECKLIST.md](./PRODUCAO-CHECKLIST.md) | Testes, backup, impressora |
+| [docs/DB-MIGRACAO-E-HARDENING.md](./docs/DB-MIGRACAO-E-HARDENING.md) | Fluxo seguro de migração e hardening |
 
 ## Licença, CORS e modo standalone/embedded
 
