@@ -291,6 +291,21 @@ Se **502 Bad Gateway**:
 
 (Depois de certificado na origem, mudar para Full strict.)
 
+### G.2.1 — Incidente 2026-07 — dentallab offline (redirect loop)
+
+**Causa:** sem vhost `dentallab.inovatitech.com.br` no **nginx do host**, o Host caía no server da Casa da Paz (`return 301 https://...`). Com Cloudflare **SSL Flexible**, isso gera loop infinito.
+
+**Correção:** vhost host HTTP :80 → `127.0.0.1:9180` **sem** redirect HTTPS.  
+Arquivos: `infra/nginx/host/dentallab.inovatitech.com.br.conf` e `infra/nginx/host/install-dentallab-host-nginx.sh`.
+
+```bash
+sudo bash infra/nginx/host/install-dentallab-host-nginx.sh
+curl -s -H "Host: dentallab.inovatitech.com.br" http://127.0.0.1/api/health
+```
+
+Cloudflare: SSL/TLS = **Flexible** enquanto a origem for só HTTP :80 neste vhost.
+
+
 ### G.3 — Always Use HTTPS
 
 SSL/TLS → Edge Certificates → **Always Use HTTPS: On**
@@ -356,3 +371,5 @@ curl -s -H "Host: dentallab.inovatitech.com.br" http://127.0.0.1/api/health
 
 # H — curl https://dentallab.inovatitech.com.br/api/health
 ```
+
+

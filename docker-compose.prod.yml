@@ -53,6 +53,9 @@ services:
       DENTAL_LAB_SMTP_PASS: ${DENTAL_LAB_SMTP_PASS:-}
       DENTAL_LAB_SMTP_FROM: ${DENTAL_LAB_SMTP_FROM:-Dental Lab <noreply@dentallab.local>}
       DENTAL_LAB_PASSWORD_RESET_EXPOSE_TOKEN: ${DENTAL_LAB_PASSWORD_RESET_EXPOSE_TOKEN:-false}
+      DENTAL_LAB_STORAGE_ROOT: ${DENTAL_LAB_STORAGE_ROOT:-/data/lab}
+    volumes:
+      - lab_storage_data:/data/lab
     depends_on:
       lab-postgres:
         condition: service_healthy
@@ -78,3 +81,4 @@ networks:
 
 volumes:
   lab_postgres_data:
+  lab_storage_data:

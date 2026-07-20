@@ -42,6 +42,7 @@ export default function EmpresaPage() {
   const [msg, setMsg] = useState("");
   const [erro, setErro] = useState("");
   const [saving, setSaving] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("");
 
   const load = async () => {
     try {
@@ -52,6 +53,12 @@ export default function EmpresaPage() {
         ) as Record<string, string>,
       );
       setUnidades(await api.empresa.listUnidades());
+      try {
+        const cfg = await api.config.getLab();
+        setLogoUrl(cfg.logoUrl ?? "");
+      } catch {
+        setLogoUrl("");
+      }
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao carregar");
     }
@@ -139,6 +146,77 @@ export default function EmpresaPage() {
             </button>
           </div>
         </form>
+      </section>
+
+      <section className="card empresa-logo-card" style={{ maxWidth: 900 }}>
+        <h3 className="empresa-section-title">Logo da empresa</h3>
+        <p className="muted" style={{ fontSize: "0.9rem", marginTop: 0 }}>
+          Mesmo logo usado em etiquetas e cabeçalhos (armazenado em Configuração do lab).
+        </p>
+        <div className="form-group">
+          <label htmlFor="empresa-logo-file">Logo (PNG/JPG, máx. 2 MB)</label>
+          <input
+            id="empresa-logo-file"
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (file.size > 2 * 1024 * 1024) {
+                setErro("Logo máximo 2 MB");
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () => {
+                void (async () => {
+                  try {
+                    setErro("");
+                    const cfg = await api.config.getLab();
+                    await api.config.saveLab({ ...cfg, logoUrl: reader.result as string });
+                    setLogoUrl(reader.result as string);
+                    setMsg("Logo atualizado.");
+                    setTimeout(() => setMsg(""), 4000);
+                  } catch (err) {
+                    setErro(err instanceof Error ? err.message : "Falha ao salvar logo");
+                  }
+                })();
+              };
+              reader.readAsDataURL(file);
+            }}
+          />
+        </div>
+        {logoUrl ? (
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 8 }}>
+            <img
+              src={logoUrl}
+              alt="Logo"
+              style={{ width: 56, height: 56, objectFit: "contain", border: "1px solid #ddd", borderRadius: 4 }}
+            />
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => {
+                void (async () => {
+                  try {
+                    const cfg = await api.config.getLab();
+                    await api.config.saveLab({ ...cfg, logoUrl: "" });
+                    setLogoUrl("");
+                    setMsg("Logo removido.");
+                    setTimeout(() => setMsg(""), 4000);
+                  } catch (err) {
+                    setErro(err instanceof Error ? err.message : "Falha ao remover logo");
+                  }
+                })();
+              }}
+            >
+              Remover logo
+            </button>
+          </div>
+        ) : (
+          <p className="muted" style={{ fontSize: "0.85rem" }}>
+            Nenhum logo cadastrado.
+          </p>
+        )}
       </section>
 
       <section className="card license-card empresa-licenca-card" style={{ maxWidth: 900 }}>

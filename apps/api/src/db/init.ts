@@ -216,6 +216,8 @@ function initSqliteSchema(db: Database.Database) {
       data_vencimento TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'Pendente',
       forma_pagamento TEXT,
+      paciente_id TEXT,
+      protese_id TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -247,6 +249,44 @@ function initSqliteSchema(db: Database.Database) {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (clinica_id, paciente_id)
     );
+
+    CREATE TABLE IF NOT EXISTS paciente_pastas (
+      id TEXT PRIMARY KEY,
+      clinica_id INTEGER NOT NULL,
+      paciente_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (clinica_id, paciente_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS paciente_anexos (
+      id TEXT PRIMARY KEY,
+      clinica_id INTEGER NOT NULL,
+      pasta_id TEXT NOT NULL,
+      paciente_id TEXT NOT NULL,
+      tipo TEXT NOT NULL DEFAULT 'scan',
+      nome_arquivo TEXT NOT NULL,
+      mime TEXT,
+      checksum_sha256 TEXT,
+      storage_key TEXT NOT NULL,
+      tamanho_bytes INTEGER NOT NULL DEFAULT 0,
+      protese_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS cam_jobs (
+      id TEXT PRIMARY KEY,
+      clinica_id INTEGER NOT NULL,
+      paciente_id TEXT NOT NULL,
+      anexo_id TEXT,
+      protese_id TEXT,
+      adapter_id TEXT NOT NULL,
+      capability TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      perfil TEXT,
+      mensagem TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
   migrateSqliteClinicaId(db);
   for (const col of ["erp_paciente_id"]) {
@@ -276,6 +316,8 @@ function initSqliteSchema(db: Database.Database) {
     ["empresa", "trial_ends_at"],
     ["empresa_unidades", "trial_started_at"],
     ["empresa_unidades", "trial_ends_at"],
+    ["financeiro", "paciente_id"],
+    ["financeiro", "protese_id"],
   ] as const) {
     try {
       db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} TEXT`);
@@ -322,6 +364,12 @@ async function initPostgres() {
   );
   await pool.query(
     `ALTER TABLE ${POSTGRES_SCHEMA}.empresa_unidades ADD COLUMN IF NOT EXISTS trial_ends_at TEXT`,
+  );
+  await pool.query(
+    `ALTER TABLE ${POSTGRES_SCHEMA}.financeiro ADD COLUMN IF NOT EXISTS paciente_id TEXT`,
+  );
+  await pool.query(
+    `ALTER TABLE ${POSTGRES_SCHEMA}.financeiro ADD COLUMN IF NOT EXISTS protese_id TEXT`,
   );
 
   const platformSql = fs.readFileSync(path.join(__dirname, "schema-platform.sql"), "utf8");

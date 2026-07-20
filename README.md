@@ -9,6 +9,17 @@
 
 Sistema modular para gestão de clínica odontológica e laboratório de próteses.
 
+## Roadmap e metodologia (jul/2026)
+
+Planejamento aprovado: pasta digital por paciente, pipeline Scanner 3D → Elegoo Mars 5 Ultra / fresadoras (registry de SDKs), Chatwoot/N8N, responsivo, Excellence Fase 4, empresas, financeiro.
+
+- Roadmap: [docs/ROADMAP-EVOLUCAO.md](docs/ROADMAP-EVOLUCAO.md)
+- CAM / SDKs: [docs/CAM-CONNECTOR.md](docs/CAM-CONNECTOR.md)
+- Chatwoot/N8N: [docs/INTEGRACOES-CHATWOOT-N8N.md](docs/INTEGRACOES-CHATWOOT-N8N.md)
+- Metodologia: SDD + Spec Kit + TDD + EDD — ver [AGENTS.md](AGENTS.md)
+
+**Ordem:** responsivo → pacientes/Excellence → empresas/integrações → **CAM** → financeiro.
+
 ## Estrutura
 
 ```
@@ -29,6 +40,7 @@ dental-lab-system/
 - **Próteses** — registro com código de barras único
 - **Etiquetas 3 vias** — impressão profissional (laboratório, clínica, paciente)
 - **Leitor de código de barras** — rastreio de status no laboratório
+- **CAD/CAM (roadmap)** — scanners 3D, impressoras (ex. Elegoo Mars 5 Ultra), fresadoras via adapters/SDKs
 
 ## Modelo de Etiqueta — 3 Vias
 
@@ -139,3 +151,5 @@ import {
 | GET/POST | `/api/proteses` | Registro de próteses |
 | GET | `/api/proteses/:id/imprimir` | HTML 3 vias |
 | POST | `/api/scanner/scan` | Leitor de código de barras |
+
+

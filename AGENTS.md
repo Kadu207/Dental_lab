@@ -14,7 +14,15 @@ Monorepo npm for dental laboratory management. Standalone or embedded in Excelle
 
 Use Spec Kit skills in `.cursor/skills/speckit-*`. Active specs live in `specs/`. Constitution: `.specify/memory/constitution.md`.
 
-Workflow: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`
+Workflow: `/speckit-specify` → `/speckit-clarify?` → `/speckit-plan` → `/speckit-tasks` → `/speckit-analyze` → `/speckit-implement` → checklist
+
+**TDD:** test tasks before implementation tasks. **EDD:** Given/When/Then in specs + domain events (N8N/Chatwoot/CAM).
+
+Roadmap (pt-BR): ver plano aprovado e, quando versionado, `docs/ROADMAP-EVOLUCAO.md`. Ordem de código aprovada (2026-07-19): `006` → `007`/`008` → `011`/`012` → **`010` CAM (pasta paciente + SDKs)** → **`009` financeiro**.
+
+## Agent orchestration
+
+Lead agent may run parallel `explore` subagents, then Spec Kit + domain skills (`dental-lab-domain`, `dental-lab-integration`, `dental-lab-api-patterns`). One spec per MR. Dual-mode (standalone + embedded) required for auth/routing/header changes. No product `docker`/`npm` build until the user authorizes the code phase after docs.
 
 ## Domain Skills
 
@@ -47,3 +55,5 @@ Workflow: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` → `/spec
 - `INTEGRATION.md` — deployment modes
 - `PRODUCAO-CHECKLIST.md` — production validation
 - `EXCELLENCE-FASE4.md` — ERP integration checklist
+
+

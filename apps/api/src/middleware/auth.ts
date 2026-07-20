@@ -14,6 +14,7 @@ const EXEMPT_PREFIXES = [
   "/api/auth/recuperar-senha",
   "/api/auth/perfis",
   "/api/licencas/status",
+  "/api/webhooks",
 ];
 
 function requestPath(req: Request): string {

@@ -97,22 +97,115 @@ export const api = {
   },
   clientes: {
     list: () => request<Cliente[]>("/clientes"),
-    listPaginated: (limit: number, offset: number) =>
-      request<Paginated<Cliente>>(`/clientes?limit=${limit}&offset=${offset}`),
+    listPaginated: (limit: number, offset: number, q?: string) => {
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      if (q?.trim()) params.set("q", q.trim());
+      return request<Paginated<Cliente>>(`/clientes?${params}`);
+    },
+    get: (id: string) => request<Cliente>(`/clientes/${id}`),
+    ficha: (id: string) =>
+      request<{
+        paciente: Cliente;
+        proteses: Array<{
+          id: string;
+          codigo: string;
+          codigoBarras?: string;
+          tipoProtese?: string;
+          status?: string;
+          setor?: string;
+          dataEntrada?: string;
+          dataPrevistaEntrega?: string;
+        }>;
+      }>(`/clientes/${id}/ficha`),
     create: (d: Partial<Cliente>) => request<Cliente>("/clientes", { method: "POST", body: JSON.stringify(d) }),
     update: (id: string, d: Partial<Cliente>) => request<Cliente>(`/clientes/${id}`, { method: "PUT", body: JSON.stringify(d) }),
     remove: (id: string) => request<void>(`/clientes/${id}`, { method: "DELETE" }),
+    syncErp: (d: {
+      erpPacienteId: string;
+      nome: string;
+      cpf?: string;
+      telefone?: string;
+      email?: string;
+      endereco?: string;
+      observacoes?: string;
+    }) => request<Cliente & { synced: boolean; created: boolean }>("/clientes/sync-erp", { method: "POST", body: JSON.stringify(d) }),
+    pasta: (id: string) =>
+      request<{ pasta: { id: string; pacienteId: string }; anexos: PacienteAnexo[] }>(`/clientes/${id}/pasta`),
+    listAnexos: (id: string) => request<PacienteAnexo[]>(`/clientes/${id}/pasta/anexos`),
+    pastaJobs: (id: string) => request<CamJob[]>(`/clientes/${id}/pasta/jobs`),
+    anexoDownloadUrl: (pacienteId: string, anexoId: string) =>
+      `${BASE}/clientes/${pacienteId}/pasta/anexos/${anexoId}/download`,
+    uploadAnexo: async (pacienteId: string, file: File, tipo: "scan" | "anexo" = "scan", proteseId?: string) => {
+      const buf = await file.arrayBuffer();
+      const headers: Record<string, string> = {
+        ...authHeaders(),
+        "Content-Type": file.type || "application/octet-stream",
+        "X-Filename": file.name,
+        "X-Anexo-Tipo": tipo,
+      };
+      if (proteseId) headers["X-Protese-Id"] = proteseId;
+      const res = await fetch(`${BASE}/clientes/${pacienteId}/pasta/anexos`, {
+        method: "POST",
+        headers,
+        body: buf,
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ erro: res.statusText }));
+        throw new Error(err.erro ?? "Erro no upload");
+      }
+      return res.json() as Promise<PacienteAnexo>;
+    },
   },
   /** Alias Lovable → mesma API que `clientes` */
   pacientes: {
-    list: (params?: { limit?: number; offset?: number; page?: number }) => {
+    list: (params?: { limit?: number; offset?: number; page?: number; q?: string }) => {
       const limit = params?.limit ?? 200;
       const offset =
         params?.page && params?.limit ? (params.page - 1) * params.limit : (params?.offset ?? 0);
-      return request<Paginated<Cliente> | Cliente[]>(
-        `/clientes?limit=${limit}&offset=${offset}`,
-      );
+      const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      if (params?.q?.trim()) qs.set("q", params.q.trim());
+      return request<Paginated<Cliente> | Cliente[]>(`/clientes?${qs}`);
     },
+    ficha: (id: string) =>
+      request<{
+        paciente: Cliente;
+        proteses: Array<{
+          id: string;
+          codigo: string;
+          codigoBarras?: string;
+          tipoProtese?: string;
+          status?: string;
+          setor?: string;
+          dataEntrada?: string;
+          dataPrevistaEntrega?: string;
+        }>;
+      }>(`/clientes/${id}/ficha`),
+    pasta: (id: string) => api.clientes.pasta(id),
+    pastaJobs: (id: string) => api.clientes.pastaJobs(id),
+    anexoDownloadUrl: (pacienteId: string, anexoId: string) =>
+      api.clientes.anexoDownloadUrl(pacienteId, anexoId),
+    uploadAnexo: (
+      pacienteId: string,
+      file: File,
+      tipo: "scan" | "anexo" = "scan",
+      proteseId?: string,
+    ) => api.clientes.uploadAnexo(pacienteId, file, tipo, proteseId),
+  },
+  cam: {
+    adapters: () => request<CamAdapterInfo[]>("/cam/adapters"),
+    listJobs: (pacienteId?: string) => {
+      const qs = pacienteId ? `?pacienteId=${encodeURIComponent(pacienteId)}` : "";
+      return request<CamJob[]>(`/cam/jobs${qs}`);
+    },
+    createJob: (data: {
+      pacienteId: string;
+      anexoId: string;
+      adapterId?: string;
+      capability?: "print" | "mill" | "ingest";
+      perfil?: string;
+      proteseId?: string;
+    }) => request<CamJob>("/cam/jobs", { method: "POST", body: JSON.stringify(data) }),
   },
   odontograma: {
     get: (pacienteId: string) =>
@@ -235,9 +328,30 @@ export const api = {
     removeUnidade: (id: string) => request<void>(`/empresa/unidades/${id}`, { method: "DELETE" }),
   },
   financeiro: {
-    list: (status?: string) => {
-      const q = status && status !== "Todos" ? `?status=${encodeURIComponent(status)}` : "";
+    list: (params?: {
+      status?: string;
+      de?: string;
+      ate?: string;
+      pacienteId?: string;
+      proteseId?: string;
+    }) => {
+      const qs = new URLSearchParams();
+      if (params?.status && params.status !== "Todos") qs.set("status", params.status);
+      if (params?.de) qs.set("de", params.de);
+      if (params?.ate) qs.set("ate", params.ate);
+      if (params?.pacienteId) qs.set("pacienteId", params.pacienteId);
+      if (params?.proteseId) qs.set("proteseId", params.proteseId);
+      const q = qs.toString() ? `?${qs}` : "";
       return request<FinanceiroLancamento[]>(`/financeiro${q}`);
+    },
+    resumo: (params?: { status?: string; de?: string; ate?: string; pacienteId?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.status && params.status !== "Todos") qs.set("status", params.status);
+      if (params?.de) qs.set("de", params.de);
+      if (params?.ate) qs.set("ate", params.ate);
+      if (params?.pacienteId) qs.set("pacienteId", params.pacienteId);
+      const q = qs.toString() ? `?${qs}` : "";
+      return request<FinanceiroResumo>(`/financeiro/resumo${q}`);
     },
     create: (d: Partial<FinanceiroLancamento>) =>
       request<FinanceiroLancamento>("/financeiro", { method: "POST", body: JSON.stringify(d) }),
@@ -270,11 +384,27 @@ export const api = {
     listTenants: () => request<TenantRecord[]>("/supervisor/tenants"),
     listTenantsOverview: () => request<TenantOverview[]>("/supervisor/tenants/overview"),
     getTenant: (clinicaId: number) => request<TenantRecord>(`/supervisor/tenants/${clinicaId}`),
-    createTenant: (data: Partial<TenantRecord> & TenantBootstrapFields) =>
-      request<TenantRecord & { loginHint?: string; adminLogin?: string }>("/supervisor/tenants", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+    createTenant: (
+      data: Partial<TenantRecord> &
+        TenantBootstrapFields & {
+          unidades?: Array<{
+            nome: string;
+            cidade?: string | null;
+            estado?: string | null;
+            cep?: string | null;
+            endereco?: string | null;
+            numero?: string | null;
+            bairro?: string | null;
+          }>;
+        },
+    ) =>
+      request<TenantRecord & { loginHint?: string; adminLogin?: string; unidadesSeeded?: number }>(
+        "/supervisor/tenants",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        },
+      ),
     updateTenant: (clinicaId: number, data: Partial<TenantRecord> & Partial<TenantBootstrapFields>) =>
       request<TenantRecord>(`/supervisor/tenants/${clinicaId}`, { method: "PUT", body: JSON.stringify(data) }),
     deleteTenant: (clinicaId: number) =>
@@ -335,6 +465,19 @@ export const api = {
         method: "POST",
       }),
   },
+  integracoes: {
+    status: () => request<IntegracoesStatus>("/integracoes/status"),
+    dispararN8n: (body?: { type?: string; data?: Record<string, unknown> }) =>
+      request<{ msg: string; results: unknown[] }>("/integracoes/n8n/disparar", {
+        method: "POST",
+        body: JSON.stringify(body ?? {}),
+      }),
+    enviarChatwoot: (body?: { type?: string; data?: Record<string, unknown> }) =>
+      request<{ msg: string; results: unknown[] }>("/integracoes/chatwoot/enviar", {
+        method: "POST",
+        body: JSON.stringify(body ?? {}),
+      }),
+  },
 };
 
 export interface Cliente {
@@ -345,6 +488,8 @@ export interface Cliente {
   email?: string;
   endereco?: string;
   observacoes?: string;
+  erpPacienteId?: string;
+  createdAt?: string;
 }
 
 export interface OdontogramaDente {
@@ -425,6 +570,50 @@ export interface LabConfig {
   endereco?: string;
   logoUrl?: string;
   tamanhoEtiquetaPadrao?: TamanhoEtiqueta;
+}
+
+export interface IntegracoesStatus {
+  enabled: boolean;
+  willEmit: boolean;
+  deploymentMode: string;
+  forceInEmbedded: boolean;
+  n8n: { configured: boolean; url: string | null; hasSecret: boolean };
+  chatwoot: { configured: boolean; url: string | null; hasSecret: boolean };
+}
+
+export interface PacienteAnexo {
+  id: string;
+  pastaId: string;
+  pacienteId: string;
+  tipo: string;
+  nomeArquivo: string;
+  mime?: string | null;
+  checksumSha256?: string | null;
+  storageKey: string;
+  tamanhoBytes: number;
+  proteseId?: string | null;
+  createdAt: string;
+}
+
+export interface CamAdapterInfo {
+  id: string;
+  label: string;
+  capabilities: Array<"print" | "mill" | "ingest">;
+  available: boolean;
+}
+
+export interface CamJob {
+  id: string;
+  pacienteId: string;
+  anexoId?: string | null;
+  proteseId?: string | null;
+  adapterId: string;
+  capability: string;
+  status: string;
+  perfil?: string | null;
+  mensagem?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type TamanhoEtiqueta = "termica_100x50" | "termica_50x30" | "a4";
@@ -525,8 +714,17 @@ export interface FinanceiroLancamento {
   valor: number;
   dataVencimento: string;
   status: string;
-  formaPagamento?: string;
+  formaPagamento?: string | null;
+  pacienteId?: string | null;
+  proteseId?: string | null;
   createdAt?: string;
+}
+
+export interface FinanceiroResumo {
+  receitas: number;
+  despesas: number;
+  saldo: number;
+  quantidade: number;
 }
 
 export interface Procedimento {

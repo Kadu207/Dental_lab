@@ -6,7 +6,9 @@ import { mapTenantRow, TENANT_SELECT_COLUMNS, type TenantPayload } from "./tenan
 import {
   seedTenantAdmin,
   seedTenantEmpresa,
+  seedTenantUnidades,
   type TenantBootstrapInput,
+  type UnidadeSeedInput,
 } from "./seed-tenant.js";
 
 export type TenantStatus = "active" | "suspended" | "provisioning";
@@ -147,6 +149,7 @@ function insertValues(input: TenantPayload) {
 export async function createTenant(
   input: TenantPayload,
   bootstrap?: TenantBootstrapInput,
+  unidades: UnidadeSeedInput[] = [],
 ): Promise<TenantRecord> {
   const pool = requirePool();
   const next = await pool.query<{ next_id: number }>(
@@ -173,6 +176,7 @@ export async function createTenant(
     schemaCache.set(clinicaId, postgresSchema);
     if (bootstrap) {
       await seedTenantEmpresa(clinicaId, input);
+      await seedTenantUnidades(clinicaId, unidades);
       await seedTenantAdmin(clinicaId, bootstrap);
     }
     await pool.query(

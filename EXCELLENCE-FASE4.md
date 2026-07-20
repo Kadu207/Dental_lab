@@ -135,13 +135,35 @@ Estas **não** estão prontas; exigem trabalho nos dois sistemas:
 
 | # | Funcionalidade | Onde implementar | Complexidade |
 |---|----------------|------------------|--------------|
-| 1 | **Sincronizar pacientes** ERP → lab | API Excellence: endpoint ou job que upsert em `dental_lab.clientes` por `clinica_id`; opcional webhook ao cadastrar paciente | Média |
-| 2 | **Criar prótese da ficha do paciente** | Front Excellence: botão “Enviar ao laboratório” → POST `/lab-api/proteses` com `pacienteId` mapeado | Média |
-| 3 | **Status do trabalho na ficha** | Front Excellence: widget que consulta `GET /lab-api/proteses/codigo/:codigo` ou por vínculo paciente | Média |
-| 4 | **Vínculo paciente ERP ↔ lab** | Coluna `erp_paciente_id` em `clientes` ou tabela de link | Baixa |
+| 1 | **Sincronizar pacientes** ERP → lab | API Excellence chama `POST /lab-api/clientes/sync-erp` (Lab: **pronto**); falta job/botão no ERP | Média |
+| 2 | **Criar prótese da ficha do paciente** | Lab: ficha `/pacientes/:id` → “Nova prótese” (**pronto**). Excellence: botão → POST `/lab-api/proteses` | Média |
+| 3 | **Status do trabalho na ficha** | Lab: `GET /lab-api/proteses/codigo/:codigo` (**pronto**). Excellence: widget na ficha clínica | Média |
+| 4 | **Vínculo paciente ERP ↔ lab** | Coluna `erp_paciente_id` + sync-erp (**pronto** no Lab) | Baixa |
 | 5 | **Permissões** | Quem vê aba Laboratório: alinhar RBAC ERP com perfis do lab | Média |
 
-Sugestão de ordem: **4 → 1 → 2 → 3 → 5**.
+### Contrato Lab (atualizado 2026-07-20 — Onda 2)
+
+```http
+POST /lab-api/clientes/sync-erp
+Authorization: Bearer <erp-jwt>
+X-Clinica-Id: <clinica_id>
+Content-Type: application/json
+
+{ "erpPacienteId": "123", "nome": "…", "cpf": "…", "telefone": "…" }
+```
+
+```http
+GET /lab-api/proteses/codigo/PROT-…
+Authorization: Bearer <erp-jwt>
+X-Clinica-Id: <clinica_id>
+```
+
+```http
+GET /lab-api/clientes/:id/ficha
+→ { paciente, proteses[] }
+```
+
+Lab UI: `/pacientes`, `/pacientes/:id` (busca `?q=` na listagem).
 
 ---
 

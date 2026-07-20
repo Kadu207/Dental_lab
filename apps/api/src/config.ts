@@ -92,3 +92,12 @@ export const PASSWORD_RESET_EXPOSE_TOKEN = envBool(
   "DENTAL_LAB_PASSWORD_RESET_EXPOSE_TOKEN",
   !SMTP_ENABLED,
 );
+
+/** Integrações N8N / Chatwoot (Onda 3 — spec 012) */
+export const INTEGRATIONS_ENABLED = envBool("INTEGRATIONS_ENABLED", false);
+/** Em embedded, CRM fica no Excellence; só emite se flag explícita */
+export const INTEGRATIONS_FORCE_IN_EMBEDDED = envBool("INTEGRATIONS_FORCE_IN_EMBEDDED", false);
+export const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL?.trim() ?? "";
+export const N8N_WEBHOOK_SECRET = process.env.N8N_WEBHOOK_SECRET?.trim() ?? "";
+export const CHATWOOT_WEBHOOK_URL = process.env.CHATWOOT_WEBHOOK_URL?.trim() ?? "";
+export const CHATWOOT_WEBHOOK_SECRET = process.env.CHATWOOT_WEBHOOK_SECRET?.trim() ?? "";

@@ -1,13 +1,23 @@
 import bcrypt from "bcryptjs";
 import { openLabClient } from "../db/client.js";
 import { newId } from "../db/index.js";
-import { ensureMatrizTrial } from "../licensing/trial.js";
+import { ensureMatrizTrial, ensureUnidadeTrial } from "../licensing/trial.js";
 import type { TenantPayload } from "./tenant-fields.js";
 
 export type TenantBootstrapInput = {
   adminLogin: string;
   adminSenha: string;
   adminEmail?: string | null;
+};
+
+export type UnidadeSeedInput = {
+  nome: string;
+  cep?: string | null;
+  endereco?: string | null;
+  numero?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
 };
 
 function redeSocialFromPayload(input: TenantPayload): string | null {
@@ -147,4 +157,61 @@ export function parseTenantBootstrap(body: Record<string, unknown>): TenantBoots
     adminSenha,
     adminEmail,
   };
+}
+
+export function parseTenantUnidades(body: Record<string, unknown>): UnidadeSeedInput[] {
+  const raw = body.unidades;
+  if (!Array.isArray(raw)) return [];
+  const out: UnidadeSeedInput[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const nome = String(row.nome ?? "").trim();
+    if (!nome) continue;
+    out.push({
+      nome,
+      cep: row.cep == null || row.cep === "" ? null : String(row.cep).trim(),
+      endereco: row.endereco == null || row.endereco === "" ? null : String(row.endereco).trim(),
+      numero: row.numero == null || row.numero === "" ? null : String(row.numero).trim(),
+      bairro: row.bairro == null || row.bairro === "" ? null : String(row.bairro).trim(),
+      cidade: row.cidade == null || row.cidade === "" ? null : String(row.cidade).trim(),
+      estado: row.estado == null || row.estado === "" ? null : String(row.estado).trim().toUpperCase().slice(0, 2),
+    });
+  }
+  return out;
+}
+
+/** Cria filiais no schema do tenant (após matriz). */
+export async function seedTenantUnidades(
+  clinicaId: number,
+  unidades: UnidadeSeedInput[],
+): Promise<number> {
+  if (unidades.length === 0) return 0;
+  const db = await openLabClient(clinicaId);
+  try {
+    let n = 0;
+    for (const u of unidades) {
+      const id = newId();
+      await db.run(
+        `INSERT INTO empresa_unidades (id, clinica_id, nome, cep, endereco, numero, bairro, cidade, estado)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          clinicaId,
+          u.nome,
+          u.cep ?? null,
+          u.endereco ?? null,
+          u.numero ?? null,
+          u.bairro ?? null,
+          u.cidade ?? null,
+          u.estado ?? null,
+        ],
+      );
+      await ensureUnidadeTrial(db, clinicaId, id);
+      n += 1;
+    }
+    return n;
+  } finally {
+    await db.release();
+  }
 }

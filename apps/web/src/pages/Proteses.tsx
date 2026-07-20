@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, type Cliente, type LabConfig, type Protese } from "../api";
 import { CrudForm, Modal, StatusBadge } from "../components";
 import { TAMANHOS_ETIQUETA, resolveTamanho, type TamanhoEtiqueta } from "../lib/labelSizes";
@@ -7,6 +8,7 @@ import { downloadWithAuth } from "../lib/downloadWithAuth";
 import { DEFAULT_PAGE_SIZE, PaginationBar } from "../components/PaginationBar";
 
 export default function ProtesesPage() {
+  const [searchParams] = useSearchParams();
   const [proteses, setProteses] = useState<Protese[]>([]);
   const [protesesTotal, setProtesesTotal] = useState(0);
   const [protesesOffset, setProtesesOffset] = useState(0);
@@ -34,6 +36,12 @@ export default function ProtesesPage() {
   useEffect(() => {
     void load(0);
   }, []);
+
+  useEffect(() => {
+    const pid = searchParams.get("pacienteId");
+    if (pid) setPacienteSel(pid);
+    if (searchParams.get("nova") === "1") setModal(true);
+  }, [searchParams]);
 
   const save = async (data: Record<string, string>) => {
     if (!pacienteSel) {

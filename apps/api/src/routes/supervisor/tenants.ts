@@ -11,9 +11,10 @@ import { requireSupervisor } from "../../auth/rbac.js";
 import { withLabClient } from "../../db/client.js";
 import { createTenant, deleteTenant, getTenant, listTenants, setTenantsStatus, updateTenant } from "../../tenants/registry.js";
 import { parseTenantPayload } from "../../tenants/tenant-fields.js";
-import { parseTenantBootstrap, updateTenantAdminCredentials } from "../../tenants/seed-tenant.js";
+import { parseTenantBootstrap, parseTenantUnidades, updateTenantAdminCredentials } from "../../tenants/seed-tenant.js";
 import { listTenantsOverview } from "../../tenants/tenant-overview.js";
 import { syncAllTenantLicensesFromRemote, syncTenantLicenseFromRemote } from "../../licensing/tenant-sync.js";
+import { emitIntegrationEvent } from "../../integracoes/emit.js";
 
 export const supervisorTenantsRouter = Router();
 
@@ -47,6 +48,8 @@ supervisorTenantsRouter.post("/bulk-status", async (req, res) => {
   }
   try {
     const updated = await setTenantsStatus(clinicaIds, status);
+    const eventType = status === "suspended" ? "tenant_suspended" : "tenant_updated";
+    emitIntegrationEvent(eventType, { clinicaIds, status, updated });
     res.json({ msg: `${updated} empresa(s) atualizada(s)`, updated });
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha na operação em lote" });
@@ -99,12 +102,22 @@ supervisorTenantsRouter.post("/", async (req, res) => {
     return res.status(400).json({ erro: "E-mail do administrador (adminEmail) é obrigatório" });
   }
 
+  const unidades = parseTenantUnidades(body);
+
   try {
-    const created = await createTenant(payload, bootstrap);
+    const created = await createTenant(payload, bootstrap, unidades);
+    emitIntegrationEvent("tenant_onboarded", {
+      clinicaId: created.clinicaId,
+      nomeFantasia: created.nomeFantasia,
+      razaoSocial: created.razaoSocial,
+      unidades: unidades.length,
+      clienteCodigo: created.clienteCodigo,
+    });
     res.status(201).json({
       ...created,
       adminLogin: bootstrap.adminLogin,
-      loginHint: `Acesso do cliente: usuário "${bootstrap.adminLogin}" e a senha definida no cadastro.`,
+      unidadesSeeded: unidades.length,
+      loginHint: `Acesso do cliente: usuário "${bootstrap.adminLogin}" e a senha definida no cadastro. Use Licença para gerar/ativar a licença.`,
     });
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao criar tenant" });
@@ -191,6 +204,12 @@ supervisorTenantsRouter.post("/:clinicaId/licencas/gerar", async (req, res) => {
         createdBy: req.auth?.sub ?? "supervisor",
       }),
     );
+    emitIntegrationEvent("licenca_gerada", {
+      clinicaId,
+      produto,
+      periodo,
+      licenseId: row.id,
+    });
     res.status(201).json(serializeLicenseRow(row, tenant));
   } catch (e) {
     res.status(500).json({ erro: e instanceof Error ? e.message : "Falha ao gerar licença" });
@@ -249,6 +268,14 @@ supervisorTenantsRouter.put("/:clinicaId", async (req, res) => {
     if (bootstrap && (bootstrap.adminSenha || bootstrap.adminEmail || bootstrap.adminLogin)) {
       await updateTenantAdminCredentials(clinicaId, bootstrap);
     }
+
+    const eventType = updated.status === "suspended" ? "tenant_suspended" : "tenant_updated";
+    emitIntegrationEvent(eventType, {
+      clinicaId,
+      status: updated.status,
+      nomeFantasia: updated.nomeFantasia,
+      razaoSocial: updated.razaoSocial,
+    });
 
     res.json(updated);
   } catch (e) {

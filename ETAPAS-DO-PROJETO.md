@@ -1,12 +1,14 @@
 # Etapas do Projeto — Dental Lab System
 
-> **Atualizado:** maio/2026 · reflete o código em `apps/api` v0.4.0, `apps/web` e integração com Excellence Dental.
+> **Atualizado:** julho/2026 · roadmap aprovado 2026-07-19 · ver `docs/ROADMAP-EVOLUCAO.md` · reflete o código em `apps/api` v0.4.0, `apps/web` e integração com Excellence Dental.
 
 ## Visão geral
 
 Sistema modular para **clínica odontológica + laboratório de próteses**, com pacote `@dental/labels` reutilizável. Pode rodar **standalone** (só o lab) ou **embedded** (aba no Excellence Dental Cloud).
 
 **Onde estamos hoje:** **Fase 3 ~90%** (falta validação física na impressora), **Fase 5 ~70%** (KPIs, setores, CSV/HTML), **Fase 6 ~75%** (backup scripts, treinamento, UI colaboradores).
+
+**Próxima evolução (aprovada):** pasta digital por paciente; scanners 3D → Elegoo Mars 5 Ultra / fresadoras (registry SDKs); Chatwoot/N8N; responsivo; Excellence Fase 4; empresas; financeiro **depois** do CAM. Metodologia: SDD + Spec Kit + TDD + EDD (AGENTS.md).
 
 ---
 
@@ -165,3 +167,18 @@ pwsh ./infra/ops/smoke-standalone.ps1 -BaseUrl http://127.0.0.1:9180
 2. Validar impressão 100×50 mm na impressora (checklist produção).  
 3. No Excellence: seguir `EXCELLENCE-FASE4.md` e `infra/LAB_MODULE_READY.md`.  
 4. Fase 5 conforme prioridade de negócio (KPIs, relatórios).
+
+---
+
+## FASE 7 — Evolução 2026 (roadmap aprovado)
+
+| Spec / onda | Tema | Status |
+|-------------|------|--------|
+| Onda 0 | Documentação | ✅ Concluída |
+| 006 | UI responsiva | Planejado (próxima após Onda 0) |
+| 007 + 008 | Pacientes + Excellence Fase 4 | Planejado |
+| 011 + 012 | Empresas + Chatwoot/N8N | Planejado |
+| **010** | **Pasta paciente + CAM/SDKs** | **Priorizado (antes do financeiro)** |
+| 009 | Financeiro operacional | Depois do CAM |
+
+Detalhes: `docs/ROADMAP-EVOLUCAO.md`, `docs/CAM-CONNECTOR.md`.

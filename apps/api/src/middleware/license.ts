@@ -23,6 +23,7 @@ const EXEMPT_PREFIXES = [
   "/api/licencas",
   "/api/auth",
   "/api/supervisor",
+  "/api/webhooks",
 ];
 
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);

@@ -22,6 +22,9 @@ import { supervisorAccountRouter } from "./routes/supervisor/account.js";
 import { supervisorBackupRouter, supervisorBackupNewRouter } from "./routes/supervisor/backup.js";
 import { supervisorBackupsListRouter } from "./routes/supervisor/backups-list.js";
 import { supervisorLicensesRouter } from "./routes/supervisor/licenses.js";
+import { integracoesRouter } from "./integracoes/router.js";
+import { webhooksRouter } from "./integracoes/webhooks.js";
+import { pastaPacienteRouter, camRouter } from "./cam/routes.js";
 import { getClinicaId } from "./routes/helpers.js";
 import {
   criarRegistroProtese,
@@ -124,6 +127,8 @@ app.use("/api/supervisor/backup", supervisorBackupNewRouter);
 app.use("/api/supervisor/backups", supervisorBackupsListRouter);
 app.use("/api/supervisor/licencas", supervisorLicensesRouter);
 app.use("/api/supervisor/conta", supervisorAccountRouter);
+app.use("/api/integracoes", integracoesRouter);
+app.use("/api/webhooks", webhooksRouter);
 
 app.get("/api/config/lab", requirePolicy("config", "read"), async (req, res) => {
   const cfg = await withLabClient(getClinicaId(req), (db) => db.getLabConfig());
@@ -190,6 +195,9 @@ app.get("/api/etiquetas/teste-impressao", requirePolicy("config", "read"), async
 
 app.use("/api/clientes", clientesRouter);
 app.use("/api/pacientes", clientesRouter);
+app.use("/api/clientes", pastaPacienteRouter);
+app.use("/api/pacientes", pastaPacienteRouter);
+app.use("/api/cam", camRouter);
 app.use("/api/colaboradores", usuariosRouter);
 app.use("/api/odontograma", odontogramaRouter);
 app.use("/api/fornecedores", fornecedoresRouter);
