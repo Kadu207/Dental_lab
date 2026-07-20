@@ -371,6 +371,9 @@ async function initPostgres() {
   await pool.query(
     `ALTER TABLE ${POSTGRES_SCHEMA}.financeiro ADD COLUMN IF NOT EXISTS protese_id TEXT`,
   );
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_lab_financeiro_paciente ON ${POSTGRES_SCHEMA}.financeiro (clinica_id, paciente_id)`,
+  );
 
   const platformSql = fs.readFileSync(path.join(__dirname, "schema-platform.sql"), "utf8");
   await pool.query(platformSql.replace(/\bdental_lab_platform\b/g, PLATFORM_SCHEMA));

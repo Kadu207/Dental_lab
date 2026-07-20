@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS dental_lab.financeiro (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_lab_financeiro_clinica ON dental_lab.financeiro (clinica_id);
-CREATE INDEX IF NOT EXISTS idx_lab_financeiro_paciente ON dental_lab.financeiro (clinica_id, paciente_id);
+-- idx_lab_financeiro_paciente: criado em initPostgres após ALTER (bases antigas sem paciente_id)
 
 CREATE TABLE IF NOT EXISTS dental_lab.procedimentos (
   id TEXT PRIMARY KEY,
