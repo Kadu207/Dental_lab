@@ -1,6 +1,6 @@
 import { Router, type Request } from "express";
 import { requirePolicy } from "../auth/rbac.js";
-import { withLabClient } from "../db/client.js";
+import { withLabClient, type LabDbClient } from "../db/client.js";
 import { newId } from "../db/index.js";
 import {
   buildFinanceiroFilters,
@@ -36,7 +36,7 @@ function parseListQuery(req: Request) {
 }
 
 async function assertVinculos(
-  db: { queryOne: (sql: string, params?: unknown[]) => Promise<Record<string, unknown> | undefined> },
+  db: LabDbClient,
   clinicaId: number,
   pacienteId: string | null | undefined,
   proteseId: string | null | undefined,

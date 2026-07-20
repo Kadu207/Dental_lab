@@ -23,8 +23,13 @@ function cid(req: Request) {
   return getClinicaId(req);
 }
 
+function paramId(req: Request, name: string): string {
+  const v = req.params[name];
+  return Array.isArray(v) ? String(v[0] ?? "") : String(v ?? "");
+}
+
 pastaPacienteRouter.get("/:id/pasta", requirePolicy("clientes", "read"), async (req, res) => {
-  const pacienteId = req.params.id;
+  const pacienteId = paramId(req, "id");
   await withLabClient(cid(req), async (db) => {
     const paciente = await db.queryOne("SELECT id FROM clientes WHERE clinica_id = ? AND id = ?", [
       cid(req),
@@ -38,7 +43,7 @@ pastaPacienteRouter.get("/:id/pasta", requirePolicy("clientes", "read"), async (
 });
 
 pastaPacienteRouter.get("/:id/pasta/anexos", requirePolicy("clientes", "read"), async (req, res) => {
-  const pacienteId = req.params.id;
+  const pacienteId = paramId(req, "id");
   await withLabClient(cid(req), async (db) => {
     const paciente = await db.queryOne("SELECT id FROM clientes WHERE clinica_id = ? AND id = ?", [
       cid(req),
@@ -55,7 +60,7 @@ pastaPacienteRouter.post(
   requirePolicy("clientes", "write"),
   express.raw({ type: () => true, limit: "80mb" }),
   async (req, res) => {
-    const pacienteId = req.params.id;
+    const pacienteId = paramId(req, "id");
     const filename = String(req.headers["x-filename"] ?? req.query.filename ?? "").trim();
     if (!filename) {
       return res.status(400).json({ erro: "Informe X-Filename com o nome do arquivo" });
@@ -104,7 +109,8 @@ pastaPacienteRouter.get(
   "/:id/pasta/anexos/:anexoId/download",
   requirePolicy("clientes", "read"),
   async (req, res) => {
-    const { id: pacienteId, anexoId } = req.params;
+    const pacienteId = paramId(req, "id");
+    const anexoId = paramId(req, "anexoId");
     await withLabClient(cid(req), async (db) => {
       const row = await getAnexoRow(db, cid(req), pacienteId, anexoId);
       if (!row) return res.status(404).json({ erro: "Anexo não encontrado" });
@@ -126,13 +132,14 @@ pastaPacienteRouter.get(
 );
 
 pastaPacienteRouter.get("/:id/pasta/jobs", requirePolicy("clientes", "read"), async (req, res) => {
+  const pacienteId = paramId(req, "id");
   await withLabClient(cid(req), async (db) => {
     const paciente = await db.queryOne("SELECT id FROM clientes WHERE clinica_id = ? AND id = ?", [
       cid(req),
-      req.params.id,
+      pacienteId,
     ]);
     if (!paciente) return res.status(404).json({ erro: "Paciente não encontrado" });
-    res.json(await listCamJobs(db, cid(req), req.params.id));
+    res.json(await listCamJobs(db, cid(req), pacienteId));
   });
 });
 
