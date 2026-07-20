@@ -169,7 +169,7 @@ export default function FinanceiroPage() {
     },
   ];
 
-  const initialForm = editing
+  const initialForm: Record<string, string> = editing
     ? {
         tipo: editing.tipo,
         descricao: editing.descricao,
@@ -181,8 +181,12 @@ export default function FinanceiroPage() {
         _protese: editing.proteseId ?? "",
       }
     : {
+        tipo: "Receita",
+        descricao: "",
+        valor: "",
         status: "Pendente",
         dataVencimento: new Date().toISOString().slice(0, 10),
+        formaPagamento: "",
         _paciente: "",
         _protese: "",
       };

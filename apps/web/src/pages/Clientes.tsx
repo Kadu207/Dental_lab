@@ -153,7 +153,7 @@ export default function ClientesPage() {
           total={total}
           limit={DEFAULT_PAGE_SIZE}
           offset={offset}
-          onChange={(nextOffset) => load(nextOffset, qApplied)}
+          onPage={(nextOffset) => void load(nextOffset, qApplied)}
         />
       </div>
       {modal && (

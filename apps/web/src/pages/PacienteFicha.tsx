@@ -227,7 +227,7 @@ export default function PacienteFichaPage() {
           </div>
         )}
 
-        <div style={{ marginTop: 16, displayTop: "1px solid #e5e5e5", paddingTop: 12 }}>
+        <div style={{ marginTop: 16, borderTop: "1px solid #e5e5e5", paddingTop: 12 }}>
           <h4 style={{ marginTop: 0 }}>Job CAM (piloto)</h4>
           <div className="form-grid" style={{ maxWidth: 640 }}>
             <div className="form-group">
