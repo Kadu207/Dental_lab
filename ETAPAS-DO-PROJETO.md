@@ -1,6 +1,6 @@
 # Etapas do Projeto — Dental Lab System
 
-> **Atualizado:** julho/2026 · roadmap aprovado 2026-07-19 · ver `docs/ROADMAP-EVOLUCAO.md` · reflete o código em `apps/api` v0.4.0, `apps/web` e integração com Excellence Dental.
+> **Atualizado:** 2026-09-30 · roadmap aprovado 2026-07-19 · ver `docs/ROADMAP-EVOLUCAO.md` · código `apps/api` v0.4.0 + `apps/web` · spec **010b** (CamAdapter) criada · produção em `dentallab.inovatitech.com.br`.
 
 ## Visão geral
 
@@ -8,7 +8,7 @@ Sistema modular para **clínica odontológica + laboratório de próteses**, com
 
 **Onde estamos hoje:** **Fase 3 ~90%** (falta validação física na impressora), **Fase 5 ~70%** (KPIs, setores, CSV/HTML), **Fase 6 ~75%** (backup scripts, treinamento, UI colaboradores). Ondas 006–013 do roadmap estão no código. Busca de pacientes é full-text (sem `LIKE`).
 
-**Próxima evolução:** validação física da impressora e itens opcionais 010.4+. Metodologia: SDD + Spec Kit + TDD + EDD (AGENTS.md). Guias: `docs/ROADMAP-EVOLUCAO.md`, `docs/DB-MIGRACAO-E-HARDENING.md`.
+**Próxima evolução:** validação física da impressora térmica; **implementação 010b** (Elegoo SDCP / agente LAN / slots scanners — plan → tasks → TDD). Metodologia: SDD + Spec Kit + TDD + EDD (AGENTS.md). Guias: `docs/ROADMAP-EVOLUCAO.md`, `docs/CAM-CONNECTOR.md`, `docs/DB-MIGRACAO-E-HARDENING.md`, `docs/DEPLOY-VPS-PASSO-A-PASSO.md`.
 
 ---
 

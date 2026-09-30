@@ -63,12 +63,22 @@ Backup **lógico por tenant** (JSON): UI supervisor → Exportar, ou `infra/ops/
 
 ## 4. Próximo deploy
 
+SSH do Windows (porta **65025**, host `inovati` — ver [DEPLOY-VPS-PASSO-A-PASSO.md](./DEPLOY-VPS-PASSO-A-PASSO.md)):
+
+```powershell
+ssh -t inovati 'cd /opt/dental-lab-system && bash infra/ops/redeploy-vps.sh'
+```
+
+Já logado na VPS:
+
 ```bash
 cd /opt/dental-lab-system
 bash infra/ops/redeploy-vps.sh
 ```
 
 Não use `sudo docker compose` dentro de `/opt/dental-lab-system`.
+
+Push antes do deploy: GitHub `Kadu207/Dental_lab` (e mirror GitLab `Kadu207/Dental_lab`). A VPS faz `git fetch` de `origin` → GitHub.
 
 ---
 
@@ -80,5 +90,6 @@ Não use `sudo docker compose` dentro de `/opt/dental-lab-system`.
 | 004 paginação API + UI | API + UI pacientes/próteses |
 | 002 módulos WIP UI | Concluída |
 | 001 estabilização segurança | Concluída |
-| 006–013 (UI, pacientes, empresas, N8N, CAM, financeiro) | No código — ver `docs/ROADMAP-EVOLUCAO.md` |
+| 006–013 (UI, pacientes, empresas, N8N, CAM pasta, financeiro) | No código — ver `docs/ROADMAP-EVOLUCAO.md` |
+| `010b` CamAdapter registry (SDCP/slots) | Spec criada — implementação 010.4+ pendente |
 | Full-text, idempotência e retry | Aplicados na subida da API — ver `docs/DB-MIGRACAO-E-HARDENING.md` |

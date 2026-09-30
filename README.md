@@ -9,16 +9,17 @@
 
 Sistema modular para gestão de clínica odontológica e laboratório de próteses.
 
-## Roadmap e metodologia (jul/2026)
+## Roadmap e metodologia
 
-Planejamento aprovado: pasta digital por paciente, pipeline Scanner 3D → Elegoo Mars 5 Ultra / fresadoras (registry de SDKs), Chatwoot/N8N, responsivo, Excellence Fase 4, empresas, financeiro.
+Ondas 006–009 + 010.1–010.3 no código. Spec **010b** (registry CamAdapter / Elegoo SDCP / slots) em `specs/010b-cam-adapter-registry/` — implementação 010.4+ pendente.
 
 - Roadmap: [docs/ROADMAP-EVOLUCAO.md](docs/ROADMAP-EVOLUCAO.md)
 - CAM / SDKs: [docs/CAM-CONNECTOR.md](docs/CAM-CONNECTOR.md)
 - Chatwoot/N8N: [docs/INTEGRACOES-CHATWOOT-N8N.md](docs/INTEGRACOES-CHATWOOT-N8N.md)
+- Deploy VPS (SSH **65025**): [docs/DEPLOY-VPS-PASSO-A-PASSO.md](docs/DEPLOY-VPS-PASSO-A-PASSO.md)
 - Metodologia: SDD + Spec Kit + TDD + EDD — ver [AGENTS.md](AGENTS.md)
 
-**Ordem:** responsivo → pacientes/Excellence → empresas/integrações → **CAM** → financeiro.
+**Ordem cumprida:** responsivo → pacientes/Excellence → empresas/integrações → **CAM pasta** → financeiro. **Próximo:** implementar 010b.
 
 ## Estrutura
 
@@ -40,7 +41,7 @@ dental-lab-system/
 - **Próteses** — registro com código de barras único
 - **Etiquetas 3 vias** — impressão profissional (laboratório, clínica, paciente)
 - **Leitor de código de barras** — rastreio de status no laboratório
-- **CAD/CAM (roadmap)** — scanners 3D, impressoras (ex. Elegoo Mars 5 Ultra), fresadoras via adapters/SDKs
+- **CAD/CAM** — pasta digital do paciente + jobs filesystem/hot folder; SDCP Elegoo e slots SDK em spec 010b
 
 ## Modelo de Etiqueta — 3 Vias
 
@@ -113,7 +114,10 @@ pwsh ./scripts/tenant_clinica_smoke.ps1
 | [PRODUCAO-CHECKLIST.md](./PRODUCAO-CHECKLIST.md) | Testes, backup, impressora |
 | [docs/DB-MIGRACAO-E-HARDENING.md](./docs/DB-MIGRACAO-E-HARDENING.md) | Migração, full-text, idempotência e retry |
 | [docs/INTEGRACOES-CHATWOOT-N8N.md](./docs/INTEGRACOES-CHATWOOT-N8N.md) | Webhooks N8N/Chatwoot |
-| [docs/ROADMAP-EVOLUCAO.md](./docs/ROADMAP-EVOLUCAO.md) | Ondas 006–013 |
+| [docs/ROADMAP-EVOLUCAO.md](./docs/ROADMAP-EVOLUCAO.md) | Ondas 006–013 + 010b |
+| [docs/CAM-CONNECTOR.md](./docs/CAM-CONNECTOR.md) | Pasta paciente + registry adapters |
+| [docs/DEPLOY-VPS-PASSO-A-PASSO.md](./docs/DEPLOY-VPS-PASSO-A-PASSO.md) | Deploy VPS (SSH 65025) |
+| [specs/010b-cam-adapter-registry/spec.md](./specs/010b-cam-adapter-registry/spec.md) | Spec registry CamAdapter |
 
 ## Licença, CORS e modo standalone/embedded
 

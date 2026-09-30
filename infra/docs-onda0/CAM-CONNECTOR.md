@@ -1,6 +1,8 @@
 # CAM Connector — pasta do paciente, scanners 3D, impressoras e fresadoras
 
-> Planejamento aprovado 2026-07-19. **Implementação Onda 4 (spec 010.1–010.3)** entregue — pasta + anexos + registry/hot folder. SDCP/agente = 010.4+. Sem build nesta fase.
+> Planejamento aprovado 2026-07-19.  
+> **Implementação Onda 4 (spec 010.1–010.3)** entregue — pasta + anexos + registry/hot folder.  
+> **Spec 010b** (`specs/010b-cam-adapter-registry/`) formaliza 010.4–010.6 (Elegoo Link/SDCP, slots scanners/fresadoras, agente LAN, eventos). Implementação de código 010.4+ pendente de plan/tasks + autorização.
 
 ## Objetivo de negócio
 
@@ -18,7 +20,7 @@ Não confundir com a página **Scanner** atual (leitor de **código de barras** 
 | Storage | `/data/lab/{clinica_id}/pacientes/{paciente_id}/scans\|anexos\|jobs/{job_id}/` |
 
 - Criação automática no `POST` de paciente.
-- API prevista: `GET/POST /api/pacientes/:id/pasta/anexos`.
+- API: `GET/POST /api/pacientes/:id/pasta/anexos` (alias clientes).
 - Isolamento multi-tenant por `clinica_id`.
 - Blobs grandes **não** ficam inline no Postgres/SQLite por padrão.
 
@@ -32,22 +34,26 @@ Scanner 3D → paciente_anexos (pasta) → prótese/peça → cam_jobs
 
 ## Registry `CamAdapter`
 
-Contrato único (TypeScript) com `id`, `capabilities`, `sendJob`, `getStatus?`, `discover?`.
+Contrato único com `id`, `capabilities`, `sendJob`, `getStatus?`, `discover?`.
 
-| Adapter | Capacidade | Disponibilidade |
-|---------|------------|-----------------|
-| `filesystem` | print, mill, ingest | Sempre (hot folder + `.done`/`.fail`) |
-| `elegoo_link` / `elegoo_sdcp` | print + status | SDK Elegoo Link + SDCP (Mars 5 Ultra Wi‑Fi) — **piloto SDK** |
-| `medit_open_api` | scan ingest | Medit Link Open API (parceria/OAuth) |
-| `shining_open_platform` | scan ingest | Shining Open Platform / SDK (autorização) |
-| `threeshape_unite` | scan ingest | 3Shape Web Service — exige parceria formal |
-| fresadoras (Roland, Imes-Icore, vhf…) | mill | Em geral filesystem/CAM; SDK se o fabricante liberar |
+| Adapter | Capacidade | Disponibilidade (hoje) |
+|---------|------------|------------------------|
+| `filesystem` | print, mill, ingest | Sempre (hot folder + `.done`/`.fail`) — **entregue** |
+| `elegoo_mars5_ultra` | print | Hot folder/perfil piloto — **entregue**; SDCP real = 010b / 010.4 |
+| `mill_generic` | mill | Hot folder — **entregue** |
+| `elegoo_link` / `elegoo_sdcp` | print + status | Spec 010b — agente LAN + Mars 5 Ultra Wi‑Fi |
+| `medit_open_api` | scan ingest | Slot reservado (010b / 010.5) — Medit Link Open API |
+| `shining_open_platform` | scan ingest | Slot reservado (010b / 010.5) |
+| `threeshape_unite` | scan ingest | Slot reservado (010b / 010.5) — exige parceria |
+| fresadoras (Roland, Imes-Icore, vhf…) | mill | Filesystem v1; SDK se o fabricante liberar |
 
 **Nota:** não existe um SDK único para “todo o mercado”. O Lab **pluga todos os disponíveis** via registry; sem SDK → `filesystem`.
 
+Detalhe de aceite e histórias: [specs/010b-cam-adapter-registry/spec.md](../specs/010b-cam-adapter-registry/spec.md).
+
 ## Agente on-prem
 
-`dental-lab-cam-agent` na LAN do laboratório:
+`dental-lab-cam-agent` na LAN do laboratório (escopo 010b):
 
 - Autentica na API Lab (HTTPS)
 - Executa adapters locais (Elegoo SDCP, pastas UNC, ChiTuBox)
@@ -55,22 +61,22 @@ Contrato único (TypeScript) com `id`, `capabilities`, `sendJob`, `getStatus?`, 
 
 Necessário quando a VPS cloud não enxerga as máquinas Wi‑Fi/USB do lab.
 
-## Fases de implementação (spec 010)
+## Fases de implementação
 
-| Fase | Entrega |
-|------|---------|
-| 010.1 | `paciente_pastas` + `paciente_anexos` + UI pasta |
-| 010.2 | Upload scan → pasta → vincular prótese |
-| 010.3 | Registry + FilesystemAdapter + perfis Elegoo (pasta) e fresadora |
-| 010.4 | Adapter Elegoo Link/SDCP no agente |
-| 010.5 | Slots Medit / Shining / 3Shape (conforme liberação) |
-| 010.6 | Eventos EDD (`cam_asset_imported`, `cam_job_*`) |
+| Fase | Entrega | Status |
+|------|---------|--------|
+| 010.1 | `paciente_pastas` + `paciente_anexos` + UI pasta | Feito (spec 010) |
+| 010.2 | Upload scan → pasta → vincular prótese | Feito (spec 010) |
+| 010.3 | Registry + FilesystemAdapter + perfis Elegoo (pasta) e fresadora | Feito (spec 010) |
+| 010.4 | Adapter Elegoo Link/SDCP no agente | Spec 010b — a implementar |
+| 010.5 | Slots Medit / Shining / 3Shape (conforme liberação) | Spec 010b — a implementar |
+| 010.6 | Eventos EDD (`cam_asset_imported`, `cam_job_*`) | Spec 010b — a implementar |
 
-## Aceite do piloto
+## Aceite do piloto (010.1–010.3)
 
 - Paciente novo → pasta DB + diretório storage
 - Importar STL de scanner na pasta do paciente
-- Job print perfil Elegoo Mars 5 Ultra
+- Job print perfil Elegoo Mars 5 Ultra (hot folder)
 - Job mill perfil genérico + `.done`
 - Tenant A não vê pasta/jobs do tenant B
 

@@ -1,8 +1,37 @@
 # Deploy VPS — Dental Lab (passo a passo completo)
 
-Servidor: **128.140.77.31**  
+Servidor: **128.140.77.31** · SSH **porta 65025** (usuário `gestaoti`)  
 Lab: **https://dentallab.inovatitech.com.br** (porta host **9180**)  
-Gerador: **https://licencas.inovatitech.com.br** (porta host **8195**)
+Gerador: **https://licencas.inovatitech.com.br** (porta host **8195**)  
+Remotes canônicos: GitHub `Kadu207/Dental_lab` · mirror GitLab `Kadu207/Dental_lab`
+
+### SSH a partir do Windows (PowerShell)
+
+`~/.ssh/config` (exemplo):
+
+```sshconfig
+Host inovati
+  HostName 128.140.77.31
+  User gestaoti
+  Port 65025
+  IdentityFile ~/.ssh/id_ed25519_inova
+  IdentitiesOnly yes
+```
+
+**Redeploy completo** (pede senha do `sudo` no `chown` — use `-t`):
+
+```powershell
+ssh -t inovati 'cd /opt/dental-lab-system && bash infra/ops/redeploy-vps.sh'
+```
+
+**Redeploy sem sudo** (quando `/opt/dental-lab-system` já pertence a `gestaoti`):
+
+```powershell
+ssh inovati 'cd /opt/dental-lab-system && git fetch origin && git reset --hard origin/master && git clean -fd && docker compose -f docker-compose.prod.yml --env-file .env build && docker compose -f docker-compose.prod.yml --env-file .env up -d && curl -fsS http://127.0.0.1:9180/api/health | python3 -m json.tool && git rev-parse --short HEAD'
+```
+
+> Sem `-t`, `redeploy-vps.sh` falha com `sudo: a password is required` (não há TTY para digitar a senha).  
+> Na 1ª tentativa de health após restart, `Expecting value: line 1 column 1` é comum — a API ainda está subindo; o script tenta de novo até ~45s.
 
 ---
 
@@ -152,7 +181,7 @@ curl -sv http://127.0.0.1:9180/api/health 2>&1 | head -30
 |---------|----------------|----------|
 | `unable to unlink ... Permission denied` | Arquivos owned by root | `sudo chown -R $(whoami):$(whoami) /opt/dental-lab-system` → reset de novo |
 | Build TS: `Cannot find module SupervisorTenants` | Reset parcial + `git clean` | `chown` + `git reset --hard origin/master` ou reclone |
-| `Expecting value: line 1 column 1` | `lab-api` reiniciando ou pull não aplicado | reset completo + rebuild; ver logs |
+| `Expecting value: line 1 column 1` | `lab-api` ainda subindo **ou** pull/build falhou | Aguarde 10–45s e repita o health; se persistir: logs `lab-api` + reset/rebuild |
 | `Connection refused` | `lab-web` down | `docker compose ... up -d` |
 | HTML em vez de JSON | URL errada | Use `/api/health` |
 | `502 Bad Gateway` | API não responde na porta 3333 | Logs `lab-api`; conferir `schema-platform.sql` no image (commit recente) |

@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Redeploy Dental Lab na VPS — corrige permissões root + alinha ao GitHub + rebuild.
 #
-# Uso (como gestaoti, uma vez com sudo para chown):
+# Uso na VPS (como gestaoti; sudo pede senha no chown):
 #   cd /opt/dental-lab-system
 #   bash infra/ops/redeploy-vps.sh
+#
+# Do Windows (SSH porta 65025 — Host inovati no ~/.ssh/config):
+#   ssh -t inovati 'cd /opt/dental-lab-system && bash infra/ops/redeploy-vps.sh'
+#   (-t é obrigatório para digitar a senha do sudo; sem TTY falha com "password is required")
 #
 # Variáveis:
 #   APP_DIR          — default /opt/dental-lab-system

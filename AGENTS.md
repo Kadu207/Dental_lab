@@ -18,7 +18,7 @@ Workflow: `/speckit-specify` → `/speckit-clarify?` → `/speckit-plan` → `/s
 
 **TDD:** test tasks before implementation tasks. **EDD:** Given/When/Then in specs + domain events (N8N/Chatwoot/CAM).
 
-Roadmap (pt-BR): ver plano aprovado e, quando versionado, `docs/ROADMAP-EVOLUCAO.md`. Ordem de código aprovada (2026-07-19): `006` → `007`/`008` → `011`/`012` → **`010` CAM (pasta paciente + SDKs)** → **`009` financeiro**.
+Roadmap (pt-BR): `docs/ROADMAP-EVOLUCAO.md`. Ordem aprovada (2026-07-19): `006` → `007`/`008` → `011`/`012` → **`010` CAM** (+ **`010b`** registry/SDCP) → **`009` financeiro**. Spec ativa CAM avançado: `specs/010b-cam-adapter-registry/`.
 
 ## Agent orchestration
 
@@ -56,6 +56,7 @@ Lead agent may run parallel `explore` subagents, then Spec Kit + domain skills (
 - `PRODUCAO-CHECKLIST.md` — production validation
 - `EXCELLENCE-FASE4.md` — ERP integration checklist
 - `docs/DB-MIGRACAO-E-HARDENING.md` — migração, full-text, idempotência e retry
-- `docs/ROADMAP-EVOLUCAO.md` — ondas 006–013
-
+- `docs/ROADMAP-EVOLUCAO.md` — ondas 006–013 + 010b
+- `docs/CAM-CONNECTOR.md` — pasta paciente + registry SDKs
+- `docs/DEPLOY-VPS-PASSO-A-PASSO.md` — VPS SSH porta 65025, redeploy
 

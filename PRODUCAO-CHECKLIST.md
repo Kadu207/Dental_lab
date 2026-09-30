@@ -159,12 +159,15 @@ Se a impressora for menor, altere temporariamente para `termica_50x30` na URL de
 
 ## 7. Deploy VPS (dentallab.inovatitech.com.br)
 
+Guia completo: [docs/DEPLOY-VPS-PASSO-A-PASSO.md](./docs/DEPLOY-VPS-PASSO-A-PASSO.md) · SSH **porta 65025**.
+
 ### Pré-requisitos
 
 - VPS Ubuntu/Debian com Docker
 - DNS na Cloudflare: `dentallab` → IP da VPS (proxy laranja)
 - Gerador de Licenças em `https://licencas.inovatitech.com.br` (porta interna **8195**)
 - `PRODUCT_API_KEY` do Gerador = `DENTAL_LAB_LICENSE_SERVER_API_KEY` no Dental Lab
+- Acesso SSH: `Host inovati` · `Port 65025` · usuário `gestaoti`
 
 ### Passos
 
@@ -181,6 +184,14 @@ sudo cp infra/nginx/dentallab.inovatitech.com.br.conf /etc/nginx/sites-available
 sudo ln -sf /etc/nginx/sites-available/dentallab.inovatitech.com.br.conf /etc/nginx/sites-enabled/
 sudo certbot --nginx -d dentallab.inovatitech.com.br
 sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Atualizar (após push GitHub/GitLab)
+
+Do Windows:
+
+```powershell
+ssh -t inovati 'cd /opt/dental-lab-system && bash infra/ops/redeploy-vps.sh'
 ```
 
 ### Cloudflare

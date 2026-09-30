@@ -1,8 +1,10 @@
 # Roadmap de evolução — Dental Lab System
 
-> **Aprovado:** 2026-07-19 · **Status:** Ondas 0–5 **concluídas** (006→009 + 010.1–010.3). Pendente opcional: **010.4+**. **Build/deploy de produção liberado** (2026-07-20).
+> **Aprovado:** 2026-07-19 · **Status:** Ondas 0–5 **concluídas** (006→009 + 010.1–010.3).  
+> **Spec 010b** (registry CamAdapter / SDCP / slots) criada em 2026-09-30 — implementação 010.4+ pendente.  
+> **Build/deploy de produção liberado** (2026-07-20). Produção alinhada a `master` (ex.: deploy 2026-09-30).
 
-Documento canônico do roadmap. Detalhes de CAM: [CAM-CONNECTOR.md](./CAM-CONNECTOR.md). Integrações CRM: [INTEGRACOES-CHATWOOT-N8N.md](./INTEGRACOES-CHATWOOT-N8N.md). Busca e webhooks: [DB-MIGRACAO-E-HARDENING.md](./DB-MIGRACAO-E-HARDENING.md).
+Documento canônico do roadmap. Detalhes de CAM: [CAM-CONNECTOR.md](./CAM-CONNECTOR.md). Integrações CRM: [INTEGRACOES-CHATWOOT-N8N.md](./INTEGRACOES-CHATWOOT-N8N.md). Busca e webhooks: [DB-MIGRACAO-E-HARDENING.md](./DB-MIGRACAO-E-HARDENING.md). Deploy: [DEPLOY-VPS-PASSO-A-PASSO.md](./DEPLOY-VPS-PASSO-A-PASSO.md).
 
 ## Metodologia (obrigatória)
 
@@ -24,8 +26,17 @@ Aprovado com **CAM antes do financeiro**:
 | 1 | `006-ui-responsiva` | Drawer mobile, CRUD usável 375/768/1280, dual-mode | Validada |
 | 2 | `007` + `008` | Pacientes (busca/ficha) + Excellence Fase 4 negócio | Validada |
 | 3 | `011` + `012` | Empresas (paridade Excellence) + Chatwoot/N8N | Validada |
-| 4 | `010` (+ `010b`) | **Pasta digital do paciente + Scanner→Elegoo/fresadoras + registry SDKs** | Validada (010.1–010.3); 010.4+ opcional |
+| 4 | `010` (+ `010b`) | **Pasta digital do paciente + Scanner→Elegoo/fresadoras + registry SDKs** | 010.1–010.3 validadas; **010b spec Draft** (010.4–010.6) |
 | 5 | `009` | Financeiro operacional (depois do CAM) | Validada |
+
+### Specs CAM
+
+| Spec | Pasta | Escopo |
+|------|-------|--------|
+| `010` | `specs/010-cam-pasta-paciente/` | Pasta digital, anexos, registry piloto filesystem/hot folder |
+| `010b` | `specs/010b-cam-adapter-registry/` | Registry pleno, Elegoo Link/SDCP + agente LAN, slots Medit/Shining/3Shape/fresadoras, eventos EDD opcionais |
+
+Próximo passo 010b: `/speckit.plan` → tasks → authorize implement (TDD).
 
 ## Gates
 

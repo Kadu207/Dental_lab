@@ -9,13 +9,16 @@
 > Backend: **API Express externa** (multi-tenant) consumida por HTTP. Não há banco local neste frontend.
 
 
-### Roadmap e integrações (2026-07)
+### Roadmap e integrações (atualizado 2026-09-30)
 
 | Doc | Descrição |
 |-----|-----------|
-| [ROADMAP-EVOLUCAO.md](./ROADMAP-EVOLUCAO.md) | Ondas Spec Kit, metodologia, gates |
+| [ROADMAP-EVOLUCAO.md](./ROADMAP-EVOLUCAO.md) | Ondas Spec Kit, metodologia, gates, status 010b |
 | [CAM-CONNECTOR.md](./CAM-CONNECTOR.md) | Pasta do paciente, Scanner→Elegoo/fresadoras, registry SDKs |
+| [DEPLOY-VPS-PASSO-A-PASSO.md](./DEPLOY-VPS-PASSO-A-PASSO.md) | Deploy VPS · SSH porta 65025 · comandos Windows |
+| [POS-DEPLOY-VPS.md](./POS-DEPLOY-VPS.md) | Senhas, backup, próximo redeploy |
 | [INTEGRACOES-CHATWOOT-N8N.md](./INTEGRACOES-CHATWOOT-N8N.md) | Webhooks HMAC, eventos tenant, dual-mode |
+| [../specs/010b-cam-adapter-registry/spec.md](../specs/010b-cam-adapter-registry/spec.md) | Spec 010b — registry CamAdapter (Draft) |
 
 ---
 

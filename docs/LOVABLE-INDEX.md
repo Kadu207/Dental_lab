@@ -32,11 +32,10 @@
 1. Leia [LOVABLE-INTEGRACAO.md](./LOVABLE-INTEGRACAO.md) (gaps e fases).
 2. Porte componentes (odontograma) para `apps/web` **ou** mantenha app Lovable separado apontando para `/api`.
 3. `VITE_DENTAL_LAB_API_URL=/api` no build web.
-4. Deploy VPS:
+4. Deploy VPS (SSH **65025**, host `inovati` — ver [DEPLOY-VPS-PASSO-A-PASSO.md](./DEPLOY-VPS-PASSO-A-PASSO.md)):
 
-```bash
-cd /opt/dental-lab-system
-bash infra/ops/redeploy-vps.sh
+```powershell
+ssh -t inovati 'cd /opt/dental-lab-system && bash infra/ops/redeploy-vps.sh'
 ```
 
 ---
