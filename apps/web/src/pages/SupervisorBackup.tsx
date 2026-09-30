@@ -21,7 +21,7 @@ function formatDate(iso: string) {
 }
 
 export default function SupervisorBackupPage() {
-  const { perfil } = useSession();
+  const { perfil, isPlatformUser } = useSession();
   const [tenants, setTenants] = useState<TenantRecord[]>([]);
   const [history, setHistory] = useState<TenantBackupLogRecord[]>([]);
   const [clinicaId, setClinicaId] = useState("");
@@ -42,7 +42,7 @@ export default function SupervisorBackupPage() {
     refresh();
   }, []);
 
-  if (perfil && !canAccessSupervisorConsole(perfil)) {
+  if (perfil && !canAccessSupervisorConsole(perfil, isPlatformUser)) {
     return <Navigate to="/" replace />;
   }
 

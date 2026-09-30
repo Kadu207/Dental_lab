@@ -6,11 +6,17 @@ type Props = {
   icon: ReactNode;
   children: ReactNode;
   end?: boolean;
+  onClick?: () => void;
 };
 
-export function SidebarNavItem({ to, icon, children, end }: Props) {
+export function SidebarNavItem({ to, icon, children, end, onClick }: Props) {
   return (
-    <NavLink to={to} end={end} className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}>
+    <NavLink
+      to={to}
+      end={end}
+      onClick={onClick}
+      className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
+    >
       <span className="sidebar-link-icon" aria-hidden>
         {icon}
       </span>

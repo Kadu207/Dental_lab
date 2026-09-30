@@ -1635,10 +1635,138 @@ p.muted {
   }
 }
 
+/* --- 006 UI responsiva: topbar + drawer --- */
+.topbar {
+  display: none;
+}
+
+.nav-backdrop {
+  display: none;
+}
+
 @media (max-width: 768px) {
-  .layout { flex-direction: column; }
-  .sidebar { width: 100%; }
-  .form-grid { grid-template-columns: 1fr; }
+  .layout {
+    flex-direction: column;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    min-height: 52px;
+    padding: 8px 12px;
+    background: linear-gradient(180deg, var(--sidebar-bg) 0%, #151929 100%);
+    color: #fff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .topbar-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    cursor: pointer;
+  }
+
+  .topbar-menu-btn:focus-visible {
+    outline: 2px solid var(--sidebar-active);
+    outline-offset: 2px;
+  }
+
+  .topbar-brand {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .topbar-brand .brand-logo-text {
+    font-size: 0.95rem;
+  }
+
+  .topbar-user {
+    font-size: 0.75rem;
+    opacity: 0.85;
+    max-width: 28vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    background: rgba(8, 10, 18, 0.55);
+    cursor: pointer;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    width: min(288px, 86vw);
+    height: 100vh;
+    min-height: 100vh;
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+    box-shadow: none;
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
+  }
+
+  body.nav-open {
+    overflow: hidden;
+  }
+
+  .main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-wrap,
+  .main .card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .main table {
+    min-width: 520px;
+  }
+}
+
+@media (min-width: 769px) {
+  .topbar {
+    display: none !important;
+  }
+
+  .nav-backdrop {
+    display: none !important;
+  }
+
+  .sidebar {
+    position: relative;
+    transform: none !important;
+  }
 }
 
 /* Odontograma (port Lovable 2026-06-03) */
@@ -1657,6 +1785,23 @@ p.muted {
   margin-top: 6px;
 }
 .odontograma-page { display: flex; flex-direction: column; gap: 16px; }
+
+.ficha-dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px 20px;
+  margin: 0;
+}
+.ficha-dl dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 0 0 2px;
+}
+.ficha-dl dd {
+  margin: 0;
+  font-size: 0.9375rem;
+}
 .odontograma-patient-card { padding: 16px; }
 .odontograma-meta { font-size: 0.8125rem; color: var(--muted); margin-top: 8px; }
 .odontograma-tabs {

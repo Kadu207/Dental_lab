@@ -48,15 +48,28 @@ export async function exportTenantBackup(clinicaId: number): Promise<TenantBacku
 
   const schema = await resolveTenantSchema(clinicaId);
   const pool = requirePool();
+  const client = await pool.connect();
   const tables = {} as TenantBackupBundle["tables"];
 
-  for (const table of TABLE_ORDER) {
-    const hasClinica = table !== "empresa";
-    const sql = hasClinica
-      ? `SELECT * FROM ${qualify(schema, table)} WHERE clinica_id = $1`
-      : `SELECT * FROM ${qualify(schema, table)} WHERE clinica_id = $1`;
-    const r = await pool.query(sql, [clinicaId]);
-    tables[table] = r.rows as Record<string, unknown>[];
+  try {
+    await client.query("SELECT set_config('app.clinica_id', $1, false)", [String(clinicaId)]);
+    for (const table of TABLE_ORDER) {
+      const sql = `SELECT * FROM ${qualify(schema, table)} WHERE clinica_id = $1`;
+      const r = await client.query(sql, [clinicaId]);
+      tables[table] = (r.rows as Record<string, unknown>[]).map((row) => {
+        const copy = { ...row };
+        delete copy.busca_texto;
+        delete copy.search_vector;
+        return copy;
+      });
+    }
+  } finally {
+    try {
+      await client.query("SELECT set_config('app.clinica_id', '', false)");
+    } catch {
+      /* ignore */
+    }
+    client.release();
   }
 
   return {
@@ -79,8 +92,10 @@ async function deleteTenantData(client: PoolClient, schema: string, clinicaId: n
   }
 }
 
+const DERIVED_COLUMNS = new Set(["busca_texto", "search_vector"]);
+
 function rowColumns(row: Record<string, unknown>): string[] {
-  return Object.keys(row);
+  return Object.keys(row).filter((column) => !DERIVED_COLUMNS.has(column));
 }
 
 async function insertRow(
@@ -162,6 +177,7 @@ export async function importTenantBackup(
 
   try {
     await client.query("BEGIN");
+    await client.query("SELECT set_config('app.clinica_id', $1, true)", [String(targetClinicaId)]);
 
     if (options.replace) {
       await deleteTenantData(client, schema, targetClinicaId);

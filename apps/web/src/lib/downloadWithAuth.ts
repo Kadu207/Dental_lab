@@ -14,8 +14,6 @@ function authHeaders(): Record<string, string> {
   if (token) h.Authorization = `Bearer ${token}`;
   const cid = getClinicaId();
   if (cid) h["X-Clinica-Id"] = cid;
-  const key = import.meta.env.VITE_DENTAL_LAB_LICENSE_KEY?.trim();
-  if (key) h["X-Dental-Lab-License"] = key;
   return h;
 }
 

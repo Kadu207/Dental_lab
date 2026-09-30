@@ -80,5 +80,5 @@ Não use `sudo docker compose` dentro de `/opt/dental-lab-system`.
 | 004 paginação API + UI | API + UI pacientes/próteses |
 | 002 módulos WIP UI | Concluída |
 | 001 estabilização segurança | Concluída |
-
-Próximas ideias: integração Excellence embedded, paginação em mais listagens, alertas de backup falho.
+| 006–013 (UI, pacientes, empresas, N8N, CAM, financeiro) | No código — ver `docs/ROADMAP-EVOLUCAO.md` |
+| Full-text, idempotência e retry | Aplicados na subida da API — ver `docs/DB-MIGRACAO-E-HARDENING.md` |

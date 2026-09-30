@@ -6,6 +6,40 @@ import { getClinicaId } from "./helpers.js";
 
 export const relatoriosRouter = Router();
 
+/** JOIN de paciente sempre isolado por tenant — evita nome de clínica B em relatório de A. */
+export const RELATORIO_CLIENTES_JOIN =
+  "LEFT JOIN clientes c ON c.id = p.paciente_id AND c.clinica_id = p.clinica_id";
+
+export function buildRelatorioProducaoQuery(opts: {
+  clinicaId: number;
+  de?: string;
+  ate?: string;
+  limit?: number;
+}): { sql: string; params: unknown[] } {
+  let sql = `SELECT p.*, c.nome as paciente_nome FROM proteses p
+      ${RELATORIO_CLIENTES_JOIN}
+      WHERE p.clinica_id = ?`;
+  const params: unknown[] = [opts.clinicaId];
+  if (opts.de) {
+    sql += " AND p.data_entrada >= ?";
+    params.push(opts.de);
+  }
+  if (opts.ate) {
+    sql += " AND p.data_entrada <= ?";
+    params.push(opts.ate);
+  }
+  if (opts.limit != null) {
+    const n = Math.trunc(opts.limit);
+    if (!Number.isInteger(n) || n < 1 || n > 5000) {
+      throw new Error("Limite de relatório inválido");
+    }
+    sql += ` ORDER BY p.data_entrada DESC LIMIT ${n}`;
+  } else {
+    sql += " ORDER BY p.data_entrada DESC, p.codigo DESC";
+  }
+  return { sql, params };
+}
+
 function csvEscape(v: unknown): string {
   const s = String(v ?? "");
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -17,21 +51,11 @@ relatoriosRouter.get("/producao.csv", requirePolicy("proteses", "read"), async (
   const ate = (req.query.ate as string | undefined)?.trim();
 
   await withLabClient(getClinicaId(req), async (db) => {
-    let sql = `SELECT p.*, c.nome as paciente_nome FROM proteses p
-      LEFT JOIN clientes c ON c.id = p.paciente_id
-      WHERE p.clinica_id = ?`;
-    const params: unknown[] = [getClinicaId(req)];
-
-    if (de) {
-      sql += " AND p.data_entrada >= ?";
-      params.push(de);
-    }
-    if (ate) {
-      sql += " AND p.data_entrada <= ?";
-      params.push(ate);
-    }
-    sql += " ORDER BY p.data_entrada DESC, p.codigo DESC";
-
+    const { sql, params } = buildRelatorioProducaoQuery({
+      clinicaId: getClinicaId(req),
+      de,
+      ate,
+    });
     const rows = await db.queryAll<Record<string, unknown>>(sql, params);
     const header = [
       "codigo",
@@ -72,19 +96,12 @@ relatoriosRouter.get("/producao.html", requirePolicy("proteses", "read"), async 
 
   await withLabClient(getClinicaId(req), async (db) => {
     const cfg = await db.getLabConfig();
-    let sql = `SELECT p.*, c.nome as paciente_nome FROM proteses p
-      LEFT JOIN clientes c ON c.id = p.paciente_id
-      WHERE p.clinica_id = ?`;
-    const params: unknown[] = [getClinicaId(req)];
-    if (de) {
-      sql += " AND p.data_entrada >= ?";
-      params.push(de);
-    }
-    if (ate) {
-      sql += " AND p.data_entrada <= ?";
-      params.push(ate);
-    }
-    sql += " ORDER BY p.data_entrada DESC LIMIT 500";
+    const { sql, params } = buildRelatorioProducaoQuery({
+      clinicaId: getClinicaId(req),
+      de,
+      ate,
+      limit: 500,
+    });
     const rows = await db.queryAll<Record<string, unknown>>(sql, params);
 
     const porStatus: Record<string, number> = {};

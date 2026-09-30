@@ -1,10 +1,14 @@
 import type { Request } from "express";
 import { isSupervisor } from "../auth/rbac.js";
 
+function usesTenantHeader(req: Request): boolean {
+  return Boolean(req.auth && (isSupervisor(req.auth.perfil) || req.auth.isPlatformUser));
+}
+
 export function getClinicaId(req: Request): number {
   if (!req.auth) throw new Error("Auth context required");
 
-  if (isSupervisor(req.auth.perfil)) {
+  if (usesTenantHeader(req)) {
     const header = req.headers["x-clinica-id"];
     if (header != null && String(header).trim() !== "") {
       const cid = Number(header);
@@ -23,7 +27,7 @@ export function getClinicaId(req: Request): number {
 /** clinicaId para rotas que aceitam supervisor sem tenant (ex.: registry). */
 export function getOptionalClinicaId(req: Request): number | null {
   if (!req.auth) return null;
-  if (isSupervisor(req.auth.perfil)) {
+  if (usesTenantHeader(req)) {
     const header = req.headers["x-clinica-id"];
     if (header != null && String(header).trim() !== "") return Number(header);
     return req.auth.clinicaId > 0 ? req.auth.clinicaId : null;

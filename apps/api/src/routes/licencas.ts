@@ -1,4 +1,5 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
+import type { AuthContext } from "../auth/types.js";
 import { ALLOWED_PERIODS, ALLOWED_PRODUCTS, PERIOD_LABELS, PRODUCT_LABELS } from "../licensing/core.js";
 import {
   activateLicense,
@@ -7,11 +8,56 @@ import {
   listLicenses,
 } from "../licensing/service.js";
 import { withLabClient } from "../db/client.js";
+import { getClinicaId } from "./helpers.js";
 
 export const licencasRouter = Router();
 
+export function resolveLicencaStatusClinicaId(req: Request): number {
+  if (!req.auth) {
+    const err = new Error("Não autenticado") as Error & { statusCode: number; code: string };
+    err.statusCode = 401;
+    err.code = "AUTH_REQUIRED";
+    throw err;
+  }
+  const clinicaId = req.auth.isPlatformUser ? getClinicaId(req) : req.auth.clinicaId;
+  if (!Number.isFinite(clinicaId) || clinicaId <= 0) {
+    throw new Error("Clínica inválida");
+  }
+  return clinicaId;
+}
+
+export function canManageLicencas(auth: AuthContext | undefined): auth is AuthContext {
+  return Boolean(auth && (auth.isPlatformUser || ["admin", "gestor"].includes(auth.perfil)));
+}
+
+export function resolveListLicensesOpts(
+  auth: AuthContext,
+): { allTenants: true } | { clinicaId: number } {
+  if (auth.isPlatformUser) return { allTenants: true };
+  return { clinicaId: auth.clinicaId };
+}
+
+export function resolveGenerateClinicaId(auth: AuthContext, bodyClinicaId: unknown): number | null {
+  if (auth.isPlatformUser) {
+    return bodyClinicaId == null ? null : (bodyClinicaId as number);
+  }
+  return auth.clinicaId;
+}
+
 licencasRouter.get("/status", async (req, res) => {
-  const clinicaId = req.auth?.clinicaId ?? Number(req.headers["x-clinica-id"] ?? 1);
+  if (!req.auth) {
+    return res.status(401).json({ erro: "Não autenticado", code: "AUTH_REQUIRED" });
+  }
+  let clinicaId: number;
+  try {
+    clinicaId = resolveLicencaStatusClinicaId(req);
+  } catch (e) {
+    const statusCode = (e as { statusCode?: number }).statusCode ?? 400;
+    return res.status(statusCode).json({
+      erro: e instanceof Error ? e.message : "Clínica inválida",
+      ...(statusCode === 401 ? { code: "AUTH_REQUIRED" } : {}),
+    });
+  }
   const unidadeId = (req.query.unidade_id ?? req.query.unidadeId) as string | undefined;
   const status = await withLabClient(clinicaId, async (db) =>
     buildStatusWithTrial(db, clinicaId, unidadeId || null),
@@ -53,10 +99,10 @@ licencasRouter.post("/ativar", async (req, res) => {
 });
 
 licencasRouter.get("/", async (req, res) => {
-  if (!req.auth || !["admin", "gestor"].includes(req.auth.perfil)) {
+  if (!canManageLicencas(req.auth)) {
     return res.status(403).json({ erro: "Sem permissão" });
   }
-  const rows = await listLicenses();
+  const rows = await listLicenses(resolveListLicensesOpts(req.auth));
   res.json(
     rows.map((row) => ({
       id: row.id,
@@ -79,7 +125,7 @@ licencasRouter.get("/", async (req, res) => {
 });
 
 licencasRouter.post("/gerar", async (req, res) => {
-  if (!req.auth || !["admin", "gestor"].includes(req.auth.perfil)) {
+  if (!canManageLicencas(req.auth)) {
     return res.status(403).json({ erro: "Somente admin ou gestor pode gerar licenças" });
   }
   const produto = String(req.body?.produto ?? "lab").toLowerCase();
@@ -95,7 +141,7 @@ licencasRouter.post("/gerar", async (req, res) => {
       produto,
       periodo,
       clienteNome: String(req.body?.cliente_nome ?? req.body?.clienteNome ?? ""),
-      clinicaId: req.body?.clinica_id ?? req.body?.clinicaId ?? null,
+      clinicaId: resolveGenerateClinicaId(req.auth, req.body?.clinica_id ?? req.body?.clinicaId ?? null),
       unidadeId: req.body?.unidade_id ?? req.body?.unidadeId ?? null,
       createdBy: req.auth.sub,
       notes: String(req.body?.notes ?? ""),

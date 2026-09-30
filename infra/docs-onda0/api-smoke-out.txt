@@ -1,0 +1,1 @@
+API Dental Lab em http://localhost:3333 (modo standalone, db sqlite, licença off, auth on)

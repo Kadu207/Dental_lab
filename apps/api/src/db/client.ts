@@ -38,7 +38,7 @@ export class LabDbClient {
   private qualify(sql: string): string {
     if (this.driver !== "postgres") return sql;
     return sql.replace(
-      /\b(clientes|fornecedores|estoque|proteses|status_historico|config|lab_usuarios|empresa|empresa_unidades|financeiro|procedimentos|grupos_permissoes|product_licenses|odontograma)\b/g,
+      /\b(clientes|fornecedores|estoque|proteses|status_historico|config|lab_usuarios|empresa|empresa_unidades|financeiro|procedimentos|grupos_permissoes|product_licenses|odontograma|paciente_pastas|paciente_anexos|cam_jobs)\b/g,
       `${this.pgSchema}.$1`,
     );
   }
@@ -82,7 +82,14 @@ export class LabDbClient {
   }
 
   async release(): Promise<void> {
-    if (this.pgClient) this.pgClient.release();
+    if (this.pgClient) {
+      try {
+        await this.pgClient.query("SELECT set_config('app.clinica_id', '', false)");
+      } catch {
+        /* conexão já encerrada */
+      }
+      this.pgClient.release();
+    }
   }
 
   async getLabConfig(): Promise<LabConfigDb> {
@@ -113,8 +120,8 @@ export class LabDbClient {
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const prefix = `PROT-${today}-`;
     const row = await this.queryOne<{ m: number }>(
-      `SELECT COALESCE(MAX(CAST(substr(codigo, -4) AS INTEGER)), 0) as m FROM proteses WHERE clinica_id = ? AND codigo LIKE ?`,
-      [this.clinicaId, `${prefix}%`],
+      `SELECT COALESCE(MAX(CAST(substr(codigo, -4) AS INTEGER)), 0) as m FROM proteses WHERE clinica_id = ? AND substr(codigo, 1, length(?)) = ?`,
+      [this.clinicaId, prefix, prefix],
     );
     return Number(row?.m ?? 0) + 1;
   }
@@ -125,6 +132,9 @@ export async function openLabClient(clinicaId: number): Promise<LabDbClient> {
   if (pgPool) {
     const client = await pgPool.connect();
     const pgSchema = await resolveTenantSchema(clinicaId);
+    await client.query("SELECT set_config('app.clinica_id', $1, false)", [
+      clinicaId > 0 ? String(clinicaId) : "",
+    ]);
     return new LabDbClient("postgres", clinicaId, undefined, client, pgSchema);
   }
   const sqliteDb = getSqliteDb();

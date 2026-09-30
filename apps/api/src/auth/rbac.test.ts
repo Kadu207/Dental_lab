@@ -3,6 +3,7 @@ import {
   canAccess,
   canManagePerfil,
   parsePermissoes,
+  sanitizePermissoesPayload,
   DEFAULT_POLICIES,
   perfilRank,
 } from "./rbac.js";
@@ -72,5 +73,39 @@ describe("RBAC", () => {
   it("supervisor has wildcard access", () => {
     const perms = parsePermissoes(null, "supervisor");
     expect(canAccess(perms, "clientes", "delete")).toBe(true);
+  });
+});
+
+describe("sanitizePermissoesPayload", () => {
+  it("rejeita resource *", () => {
+    expect(() =>
+      sanitizePermissoesPayload([{ resource: "*", actions: ["read"] }], "gestor"),
+    ).toThrow(/resource "\*"/);
+  });
+
+  it("rejeita resource desconhecido", () => {
+    expect(() =>
+      sanitizePermissoesPayload([{ resource: "nao-existe", actions: ["read"] }], "gestor"),
+    ).toThrow(/Recurso inválido/);
+  });
+
+  it("rejeita action extra", () => {
+    expect(() =>
+      sanitizePermissoesPayload([{ resource: "financeiro", actions: ["read", "admin"] }], "gestor"),
+    ).toThrow(/Ação inválida/);
+  });
+
+  it("gestor não pode conceder config delete", () => {
+    expect(() =>
+      sanitizePermissoesPayload([{ resource: "config", actions: ["delete"] }], "gestor"),
+    ).toThrow("Não é permitido conceder permissão que você não possui");
+  });
+
+  it("gestor pode conceder financeiro write", () => {
+    const result = sanitizePermissoesPayload(
+      [{ resource: "financeiro", actions: ["write"] }],
+      "gestor",
+    );
+    expect(result).toEqual([{ resource: "financeiro", actions: ["write"] }]);
   });
 });

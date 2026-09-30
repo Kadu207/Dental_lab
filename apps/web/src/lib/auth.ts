@@ -24,11 +24,20 @@ export function getAuthToken(): string | null {
   );
 }
 
-/** Supervisor ou admin de plataforma (integrações). */
-export function canAccessSupervisorConsole(perfil: string | null): boolean {
+/**
+ * Supervisor ou admin de plataforma.
+ * Quando `isPlatformUserFromApi` é passado (ex.: `/auth/me`), a UI NÃO usa
+ * `localStorage lab_platform_user` para autorização.
+ */
+export function canAccessSupervisorConsole(
+  perfil: string | null,
+  isPlatformUserFromApi?: boolean,
+): boolean {
   if (!perfil) return false;
   if (perfil === "supervisor") return true;
-  return perfil === "admin" && isPlatformUser();
+  if (perfil !== "admin") return false;
+  if (typeof isPlatformUserFromApi === "boolean") return isPlatformUserFromApi;
+  return isPlatformUser();
 }
 
 export function getClinicaId(): string | null {

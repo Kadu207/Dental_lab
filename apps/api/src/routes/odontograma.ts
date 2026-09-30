@@ -1,22 +1,15 @@
 import { Router } from "express";
 import { requirePolicy } from "../auth/rbac.js";
 import { withLabClient } from "../db/client.js";
+import {
+  OdontogramaValidationError,
+  parseDentesLenient,
+  resolveDentesPayload,
+  type ToothPayload,
+} from "../odontograma/tooth.js";
 import { getClinicaId } from "./helpers.js";
 
 export const odontogramaRouter = Router();
-
-type ToothPayload = { fdi: number; condition: string; note?: string };
-
-function parseDentes(raw: unknown): ToothPayload[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((x) => x && typeof x === "object" && typeof (x as ToothPayload).fdi === "number")
-    .map((x) => ({
-      fdi: Number((x as ToothPayload).fdi),
-      condition: String((x as ToothPayload).condition ?? "sadio"),
-      note: (x as ToothPayload).note ? String((x as ToothPayload).note) : undefined,
-    }));
-}
 
 odontogramaRouter.get("/:pacienteId", requirePolicy("odontograma", "read"), async (req, res) => {
   const cid = getClinicaId(req);
@@ -34,7 +27,7 @@ odontogramaRouter.get("/:pacienteId", requirePolicy("odontograma", "read"), asyn
     }
     let dentes: ToothPayload[] = [];
     try {
-      dentes = parseDentes(JSON.parse(row.dentes));
+      dentes = parseDentesLenient(JSON.parse(row.dentes));
     } catch {
       dentes = [];
     }
@@ -45,9 +38,14 @@ odontogramaRouter.get("/:pacienteId", requirePolicy("odontograma", "read"), asyn
 odontogramaRouter.put("/:pacienteId", requirePolicy("odontograma", "write"), async (req, res) => {
   const cid = getClinicaId(req);
   const pacienteId = req.params.pacienteId;
-  const dentes = parseDentes(req.body?.dentes ?? req.body);
-  if (!dentes.length && req.body?.dentes !== undefined && !Array.isArray(req.body.dentes)) {
-    return res.status(400).json({ erro: "Campo dentes deve ser um array" });
+  let dentes: ToothPayload[];
+  try {
+    dentes = resolveDentesPayload(req.body);
+  } catch (err) {
+    if (err instanceof OdontogramaValidationError) {
+      return res.status(400).json({ erro: err.message });
+    }
+    throw err;
   }
 
   await withLabClient(cid, async (db) => {

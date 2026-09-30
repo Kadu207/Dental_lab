@@ -5,10 +5,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
 import {
+  BOOTSTRAP_ADMIN_PASSWORD,
   DATABASE_URL,
   DB_DRIVER,
   DEPLOYMENT_MODE,
   ERP_DATABASE_URL,
+  isProductionRuntime,
   PLATFORM_SCHEMA,
   POSTGRES_SCHEMA,
   SQLITE_PATH,
@@ -17,6 +19,12 @@ import {
 } from "../config.js";
 import { ensurePlatformAdmin, ensurePlatformSupervisor } from "../auth/platform.js";
 import { ensureDefaultTenantRegistry } from "../tenants/registry.js";
+import {
+  applyPostgresClienteFullText,
+  applyPostgresIdempotencyStore,
+  applySqliteClienteFullText,
+  applySqliteIdempotencyStore,
+} from "../search/fts-schema.js";
 import { setPgPool, setSqliteDb } from "./pool.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -216,6 +224,8 @@ function initSqliteSchema(db: Database.Database) {
       data_vencimento TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'Pendente',
       forma_pagamento TEXT,
+      paciente_id TEXT,
+      protese_id TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -247,6 +257,44 @@ function initSqliteSchema(db: Database.Database) {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (clinica_id, paciente_id)
     );
+
+    CREATE TABLE IF NOT EXISTS paciente_pastas (
+      id TEXT PRIMARY KEY,
+      clinica_id INTEGER NOT NULL,
+      paciente_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (clinica_id, paciente_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS paciente_anexos (
+      id TEXT PRIMARY KEY,
+      clinica_id INTEGER NOT NULL,
+      pasta_id TEXT NOT NULL,
+      paciente_id TEXT NOT NULL,
+      tipo TEXT NOT NULL DEFAULT 'scan',
+      nome_arquivo TEXT NOT NULL,
+      mime TEXT,
+      checksum_sha256 TEXT,
+      storage_key TEXT NOT NULL,
+      tamanho_bytes INTEGER NOT NULL DEFAULT 0,
+      protese_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS cam_jobs (
+      id TEXT PRIMARY KEY,
+      clinica_id INTEGER NOT NULL,
+      paciente_id TEXT NOT NULL,
+      anexo_id TEXT,
+      protese_id TEXT,
+      adapter_id TEXT NOT NULL,
+      capability TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      perfil TEXT,
+      mensagem TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
   migrateSqliteClinicaId(db);
   for (const col of ["erp_paciente_id"]) {
@@ -276,6 +324,8 @@ function initSqliteSchema(db: Database.Database) {
     ["empresa", "trial_ends_at"],
     ["empresa_unidades", "trial_started_at"],
     ["empresa_unidades", "trial_ends_at"],
+    ["financeiro", "paciente_id"],
+    ["financeiro", "protese_id"],
   ] as const) {
     try {
       db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} TEXT`);
@@ -283,6 +333,8 @@ function initSqliteSchema(db: Database.Database) {
       /* existe */
     }
   }
+  applySqliteClienteFullText(db);
+  applySqliteIdempotencyStore(db);
 }
 
 async function initPostgres() {
@@ -323,32 +375,56 @@ async function initPostgres() {
   await pool.query(
     `ALTER TABLE ${POSTGRES_SCHEMA}.empresa_unidades ADD COLUMN IF NOT EXISTS trial_ends_at TEXT`,
   );
+  await pool.query(
+    `ALTER TABLE ${POSTGRES_SCHEMA}.financeiro ADD COLUMN IF NOT EXISTS paciente_id TEXT`,
+  );
+  await pool.query(
+    `ALTER TABLE ${POSTGRES_SCHEMA}.financeiro ADD COLUMN IF NOT EXISTS protese_id TEXT`,
+  );
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_lab_financeiro_paciente ON ${POSTGRES_SCHEMA}.financeiro (clinica_id, paciente_id)`,
+  );
+  await applyPostgresClienteFullText(pool, POSTGRES_SCHEMA);
+  await applyPostgresIdempotencyStore(pool, POSTGRES_SCHEMA);
 
   const platformSql = fs.readFileSync(path.join(__dirname, "schema-platform.sql"), "utf8");
   await pool.query(platformSql.replace(/\bdental_lab_platform\b/g, PLATFORM_SCHEMA));
   await ensureDefaultTenantRegistry(pool);
 
-  if (DEPLOYMENT_MODE === "standalone") {
-    const adminCheck = await pool.query(
-      `SELECT id FROM ${POSTGRES_SCHEMA}.lab_usuarios WHERE clinica_id = 1 AND nome = $1`,
-      ["admin"],
-    );
-    if (adminCheck.rowCount === 0) {
-      const { randomUUID } = await import("crypto");
-      const hash = await bcrypt.hash("admin123", 10);
-      await pool.query(
-        `INSERT INTO ${POSTGRES_SCHEMA}.lab_usuarios (id, clinica_id, nome, email, senha_hash, perfil)
-         VALUES ($1, 1, 'admin', 'admin@dentallab.local', $2, 'admin')`,
-        [randomUUID(), hash],
+  await pool.query("SELECT set_config('app.clinica_id', '1', false)");
+  try {
+    if (DEPLOYMENT_MODE === "standalone") {
+      const adminCheck = await pool.query(
+        `SELECT id FROM ${POSTGRES_SCHEMA}.lab_usuarios WHERE clinica_id = 1 AND nome = $1`,
+        ["admin"],
       );
-      console.warn("[dental-lab] Usuário inicial standalone: admin / admin123 — altere a senha em produção.");
+      if (adminCheck.rowCount === 0) {
+        const { randomUUID } = await import("crypto");
+        const hash = await bcrypt.hash(BOOTSTRAP_ADMIN_PASSWORD, 10);
+        await pool.query(
+          `INSERT INTO ${POSTGRES_SCHEMA}.lab_usuarios (id, clinica_id, nome, email, senha_hash, perfil)
+           VALUES ($1, 1, 'admin', 'admin@dentallab.local', $2, 'admin')`,
+          [randomUUID(), hash],
+        );
+        if (isProductionRuntime()) {
+          console.warn(
+            "[dental-lab] Usuário inicial standalone criado: admin. Altere a senha após o primeiro login.",
+          );
+        } else {
+          console.warn(
+            "[dental-lab] Usuário inicial standalone: admin (senha de desenvolvimento) — altere a senha em produção.",
+          );
+        }
+      }
+      await pool.query(
+        `UPDATE ${POSTGRES_SCHEMA}.lab_usuarios SET email = 'admin@dentallab.local'
+         WHERE clinica_id = 1 AND lower(nome) = 'admin' AND (email IS NULL OR email = '')`,
+      );
+      await ensurePlatformSupervisor(pool, SUPERVISOR_SEED_PASSWORD);
+      await ensurePlatformAdmin(pool, PLATFORM_ADMIN_SEED_PASSWORD);
     }
-    await pool.query(
-      `UPDATE ${POSTGRES_SCHEMA}.lab_usuarios SET email = 'admin@dentallab.local'
-       WHERE clinica_id = 1 AND lower(nome) = 'admin' AND (email IS NULL OR email = '')`,
-    );
-    await ensurePlatformSupervisor(pool, SUPERVISOR_SEED_PASSWORD);
-    await ensurePlatformAdmin(pool, PLATFORM_ADMIN_SEED_PASSWORD);
+  } finally {
+    await pool.query("SELECT set_config('app.clinica_id', '', false)");
   }
 
   setPgPool(pool);
@@ -379,11 +455,19 @@ export async function initDb(): Promise<void> {
     .get();
   if (!adminUser) {
     const { randomUUID } = await import("crypto");
-    const hash = bcrypt.hashSync("admin123", 10);
+    const hash = bcrypt.hashSync(BOOTSTRAP_ADMIN_PASSWORD, 10);
     db.prepare(
       `INSERT INTO lab_usuarios (id, clinica_id, nome, email, senha_hash, perfil) VALUES (?, 1, 'admin', 'admin@dentallab.local', ?, 'admin')`,
     ).run(randomUUID(), hash);
-    console.warn("[dental-lab] Usuário inicial standalone: admin / admin123 — altere a senha em produção.");
+    if (isProductionRuntime()) {
+      console.warn(
+        "[dental-lab] Usuário inicial standalone criado: admin. Altere a senha após o primeiro login.",
+      );
+    } else {
+      console.warn(
+        "[dental-lab] Usuário inicial standalone: admin (senha de desenvolvimento) — altere a senha em produção.",
+      );
+    }
   }
   db.prepare(
     `UPDATE lab_usuarios SET email = 'admin@dentallab.local'

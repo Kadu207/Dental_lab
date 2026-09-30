@@ -5,7 +5,7 @@ import { canAccessSupervisorConsole } from "../lib/auth";
 import { useSession } from "../lib/SessionContext";
 
 export default function SupervisorContaPage() {
-  const { perfil } = useSession();
+  const { perfil, isPlatformUser } = useSession();
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmar, setConfirmar] = useState("");
@@ -13,7 +13,7 @@ export default function SupervisorContaPage() {
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (perfil && !canAccessSupervisorConsole(perfil)) {
+  if (perfil && !canAccessSupervisorConsole(perfil, isPlatformUser)) {
     return <Navigate to="/" replace />;
   }
 

@@ -50,7 +50,8 @@ pwsh ./infra/ops/smoke-lab-embedded.ps1 -BaseUrl http://127.0.0.1
 - [ ] `DENTAL_LAB_LICENSE_REQUIRED=true` + chave em vault (módulo licenciado)  
 - [ ] `DENTAL_LAB_CORS_ORIGINS` com URL exata do front (sem lista vazia em ambiente exposto)  
 - [ ] Não commitar `.env` com segredos  
-- [ ] HTTPS no reverse proxy (Nginx / Caddy na VPS)  
+- [ ] HTTPS no reverse proxy (Nginx / Caddy na VPS)
+- [ ] Após o restart da API, confirmar full-text: `busca_texto` / `search_vector` geradas e índice `idx_lab_clientes_search` (ver `docs/DB-MIGRACAO-E-HARDENING.md`)  
 - [ ] Remover `VITE_DENTAL_LAB_LICENSE_KEY` do build de produção (licença só no servidor)
 
 ---

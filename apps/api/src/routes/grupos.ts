@@ -1,5 +1,12 @@
 import { Router, type Request } from "express";
-import { DEFAULT_POLICIES, PERFIS_VALIDOS, parsePermissoes, requirePolicy } from "../auth/rbac.js";
+import {
+  DEFAULT_POLICIES,
+  TENANT_PERFIS,
+  canManagePerfil,
+  parsePermissoes,
+  requirePolicy,
+  type LabPerfil,
+} from "../auth/rbac.js";
 import { withLabClient } from "../db/client.js";
 import { newId } from "../db/index.js";
 
@@ -50,8 +57,15 @@ gruposRouter.get("/permissoes", requirePolicy("grupos", "read"), async (req, res
 gruposRouter.post("/permissoes", requirePolicy("grupos", "write"), async (req, res) => {
   const { userId, role } = req.body;
   if (!userId || !role) return res.status(400).json({ erro: "userId e role são obrigatórios" });
-  if (!PERFIS_VALIDOS.includes(role)) {
-    return res.status(400).json({ erro: "Perfil inválido", validos: PERFIS_VALIDOS });
+  if (!TENANT_PERFIS.includes(role)) {
+    return res.status(400).json({ erro: "Perfil inválido", validos: TENANT_PERFIS });
+  }
+  const actor = req.auth!.perfil as LabPerfil;
+  if (!canManagePerfil(actor, role as LabPerfil)) {
+    return res.status(403).json({
+      erro: "Sem permissão para gerenciar usuário com este perfil",
+      code: "FORBIDDEN_RANK",
+    });
   }
   await withLabClient(cid(req), async (db) => {
     await db.run("DELETE FROM grupos_permissoes WHERE clinica_id = ? AND user_id = ?", [cid(req), userId]);

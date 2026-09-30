@@ -16,6 +16,22 @@ export interface UsuarioPermissao {
   actions: PermissaoAcao[];
 }
 
+export const LAB_RESOURCES = [
+  "empresa",
+  "financeiro",
+  "colaboradores",
+  "grupos",
+  "procedimentos",
+  "clientes",
+  "odontograma",
+  "fornecedores",
+  "estoque",
+  "proteses",
+  "config",
+] as const;
+export type LabResource = (typeof LAB_RESOURCES)[number];
+export const LAB_ACTIONS: PermissaoAcao[] = ["read", "write", "delete"];
+
 export const PERFIS_VALIDOS: LabPerfil[] = [
   "supervisor",
   "admin",
@@ -142,6 +158,70 @@ export function canAccess(
     if (p.resource === resource && p.actions.includes(action)) return true;
   }
   return false;
+}
+
+function isLabResource(value: string): value is LabResource {
+  return (LAB_RESOURCES as readonly string[]).includes(value);
+}
+
+function isPermissaoAcao(value: unknown): value is PermissaoAcao {
+  return typeof value === "string" && (LAB_ACTIONS as readonly string[]).includes(value);
+}
+
+/**
+ * Valida payload customizado de permissões. Nunca aceita resource "*".
+ * Não concede ação que o ator não possua na política padrão do perfil.
+ */
+export function sanitizePermissoesPayload(raw: unknown, actor: LabPerfil): UsuarioPermissao[] {
+  if (!Array.isArray(raw)) {
+    throw new Error("permissoes deve ser um array");
+  }
+
+  const actorPerms = parsePermissoes(null, actor);
+  const result: UsuarioPermissao[] = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error("Cada item de permissão deve ser um objeto com resource e actions");
+    }
+    const rec = item as Record<string, unknown>;
+    if (typeof rec.resource !== "string" || rec.resource.trim() === "") {
+      throw new Error("resource deve ser uma string");
+    }
+    if (!Array.isArray(rec.actions)) {
+      throw new Error("actions deve ser um array");
+    }
+    if (rec.resource === "*") {
+      throw new Error('Não é permitido conceder permissão com resource "*"');
+    }
+    if (!isLabResource(rec.resource)) {
+      throw new Error(`Recurso inválido: ${rec.resource}`);
+    }
+
+    const seen = new Set<PermissaoAcao>();
+    const actions: PermissaoAcao[] = [];
+    for (const action of rec.actions) {
+      if (!isPermissaoAcao(action)) {
+        throw new Error(`Ação inválida: ${String(action)}`);
+      }
+      if (seen.has(action)) continue;
+      seen.add(action);
+      if (!canAccess(actorPerms, rec.resource, action)) {
+        throw new Error("Não é permitido conceder permissão que você não possui");
+      }
+      actions.push(action);
+    }
+
+    if (actions.length > 0) {
+      result.push({ resource: rec.resource, actions });
+    }
+  }
+
+  if (result.length === 0) {
+    throw new Error("É necessário conceder ao menos uma permissão válida");
+  }
+
+  return result;
 }
 
 export function requirePolicy(resource: string, action: PermissaoAcao) {

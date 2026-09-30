@@ -2,7 +2,14 @@ import { Router, type Request, type Response } from "express";
 import bcrypt from "bcryptjs";
 import { DEPLOYMENT_MODE } from "../config.js";
 import { listErpUsuarios } from "../auth/erp-users.js";
-import { TENANT_PERFIS, canManagePerfil, requirePolicy, type LabPerfil, type UsuarioPermissao } from "../auth/rbac.js";
+import {
+  TENANT_PERFIS,
+  canManagePerfil,
+  requirePolicy,
+  sanitizePermissoesPayload,
+  type LabPerfil,
+  type UsuarioPermissao,
+} from "../auth/rbac.js";
 import { withLabClient } from "../db/client.js";
 import { newId } from "../db/index.js";
 
@@ -139,15 +146,27 @@ usuariosRouter.put("/:id/permissoes", requirePolicy("colaboradores", "write"), a
   if (DEPLOYMENT_MODE === "embedded") {
     return res.status(400).json({ erro: "Permissões no modo integrado vêm do ERP.", code: "USE_ERP_USERS" });
   }
-  const { permissoes } = req.body as { permissoes?: UsuarioPermissao[] };
-  if (!Array.isArray(permissoes)) return res.status(400).json({ erro: "permissoes deve ser um array" });
+  const { permissoes } = req.body as { permissoes?: unknown };
   await withLabClient(cid(req), async (db) => {
-    const r = await db.run("UPDATE lab_usuarios SET permissoes = ? WHERE clinica_id = ? AND id = ?", [
-      JSON.stringify(permissoes),
+    const alvo = await db.queryOne<{ perfil: string }>(
+      "SELECT perfil FROM lab_usuarios WHERE clinica_id = ? AND id = ?",
+      [cid(req), req.params.id],
+    );
+    if (!alvo) return res.status(404).json({ erro: "Usuário não encontrado" });
+    if (!canManagePerfil(actorPerfil(req), alvo.perfil as LabPerfil)) {
+      return forbiddenRank(res);
+    }
+    let sanitizadas: UsuarioPermissao[];
+    try {
+      sanitizadas = sanitizePermissoesPayload(permissoes, actorPerfil(req));
+    } catch (e) {
+      return res.status(400).json({ erro: e instanceof Error ? e.message : "Permissões inválidas" });
+    }
+    await db.run("UPDATE lab_usuarios SET permissoes = ? WHERE clinica_id = ? AND id = ?", [
+      JSON.stringify(sanitizadas),
       cid(req),
       req.params.id,
     ]);
-    if (r.changes === 0) return res.status(404).json({ erro: "Usuário não encontrado" });
     res.json({ msg: "Permissões atualizadas" });
   });
 });

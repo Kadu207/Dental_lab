@@ -22,6 +22,9 @@ import { supervisorAccountRouter } from "./routes/supervisor/account.js";
 import { supervisorBackupRouter, supervisorBackupNewRouter } from "./routes/supervisor/backup.js";
 import { supervisorBackupsListRouter } from "./routes/supervisor/backups-list.js";
 import { supervisorLicensesRouter } from "./routes/supervisor/licenses.js";
+import { integracoesRouter } from "./integracoes/router.js";
+import { webhooksRouter } from "./integracoes/webhooks.js";
+import { pastaPacienteRouter, camRouter } from "./cam/routes.js";
 import { getClinicaId } from "./routes/helpers.js";
 import {
   criarRegistroProtese,
@@ -43,6 +46,7 @@ import {
   LICENSE_SERVER_URL,
   PORT,
   TRIAL_DAYS,
+  isCorsOriginAllowed,
 } from "./config.js";
 import { isRemoteLicenseEnabled } from "./licensing/remote-client.js";
 import { startLicenseHeartbeat } from "./licensing/heartbeat.js";
@@ -62,19 +66,7 @@ app.set("etag", false);
 app.use(
   cors({
     origin(origin, cb) {
-      if (CORS_ORIGINS.length === 0) {
-        cb(null, true);
-        return;
-      }
-      if (!origin) {
-        cb(null, true);
-        return;
-      }
-      if (CORS_ORIGINS.includes(origin)) {
-        cb(null, true);
-        return;
-      }
-      cb(null, false);
+      cb(null, isCorsOriginAllowed(origin, CORS_ORIGINS));
     },
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "X-Dental-Lab-License", "X-Clinica-Id"],
@@ -114,8 +106,8 @@ app.get("/api/license/status", (_req, res) => {
   });
 });
 
-app.use(licenseGate);
 app.use(authGate);
+app.use(licenseGate);
 app.use("/api/auth", authRouter);
 app.use("/api/licencas", licencasRouter);
 app.use("/api/supervisor/tenants", supervisorTenantsRouter);
@@ -124,6 +116,8 @@ app.use("/api/supervisor/backup", supervisorBackupNewRouter);
 app.use("/api/supervisor/backups", supervisorBackupsListRouter);
 app.use("/api/supervisor/licencas", supervisorLicensesRouter);
 app.use("/api/supervisor/conta", supervisorAccountRouter);
+app.use("/api/integracoes", integracoesRouter);
+app.use("/api/webhooks", webhooksRouter);
 
 app.get("/api/config/lab", requirePolicy("config", "read"), async (req, res) => {
   const cfg = await withLabClient(getClinicaId(req), (db) => db.getLabConfig());
@@ -133,8 +127,8 @@ app.get("/api/config/lab", requirePolicy("config", "read"), async (req, res) => 
 app.put("/api/config/lab", requirePolicy("config", "write"), async (req, res) => {
   const { nome, telefone, endereco, logoUrl, tamanhoEtiquetaPadrao } = req.body;
   if (!nome?.trim()) return res.status(400).json({ erro: "Nome da empresa é obrigatório" });
-  if (logoUrl && !logoUrl.startsWith("data:image/")) {
-    return res.status(400).json({ erro: "Logo deve ser PNG ou JPG (base64)" });
+  if (logoUrl && !/^data:image\/(png|jpeg);base64,/i.test(String(logoUrl).trim())) {
+    return res.status(400).json({ erro: "Logo deve ser PNG ou JPEG em data URL (base64)" });
   }
   const tamanhosValidos = ["termica_100x50", "termica_50x30", "a4"];
   if (tamanhoEtiquetaPadrao && !tamanhosValidos.includes(tamanhoEtiquetaPadrao)) {
@@ -190,6 +184,9 @@ app.get("/api/etiquetas/teste-impressao", requirePolicy("config", "read"), async
 
 app.use("/api/clientes", clientesRouter);
 app.use("/api/pacientes", clientesRouter);
+app.use("/api/clientes", pastaPacienteRouter);
+app.use("/api/pacientes", pastaPacienteRouter);
+app.use("/api/cam", camRouter);
 app.use("/api/colaboradores", usuariosRouter);
 app.use("/api/odontograma", odontogramaRouter);
 app.use("/api/fornecedores", fornecedoresRouter);

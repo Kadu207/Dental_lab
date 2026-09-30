@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import type { Pool } from "pg";
 import { POSTGRES_SCHEMA } from "../config.js";
+import { applyPostgresClienteFullText } from "../search/fts-schema.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -36,4 +37,7 @@ export async function provisionTenantSchema(pool: Pool, schemaName: string): Pro
   await pool.query(`ALTER TABLE ${schemaName}.empresa ADD COLUMN IF NOT EXISTS trial_ends_at TEXT`);
   await pool.query(`ALTER TABLE ${schemaName}.empresa_unidades ADD COLUMN IF NOT EXISTS trial_started_at TEXT`);
   await pool.query(`ALTER TABLE ${schemaName}.empresa_unidades ADD COLUMN IF NOT EXISTS trial_ends_at TEXT`);
+  await pool.query(`ALTER TABLE ${schemaName}.financeiro ADD COLUMN IF NOT EXISTS paciente_id TEXT`);
+  await pool.query(`ALTER TABLE ${schemaName}.financeiro ADD COLUMN IF NOT EXISTS protese_id TEXT`);
+  await applyPostgresClienteFullText(pool, schemaName);
 }

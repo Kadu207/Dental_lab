@@ -19,7 +19,7 @@ import { canAccessSupervisorConsole } from "../lib/auth";
 import { useSession } from "../lib/SessionContext";
 
 export default function SupervisorTenantsPage() {
-  const { perfil } = useSession();
+  const { perfil, isPlatformUser } = useSession();
   const [tenants, setTenants] = useState<TenantRecord[]>([]);
   const [licenses, setLicenses] = useState<TenantLicenseRow[]>([]);
   const [tenantMode, setTenantMode] = useState<string>("");
@@ -71,7 +71,7 @@ export default function SupervisorTenantsPage() {
     setFormCnpj(t.cnpj ?? "");
   }, [tenantMode, tenants]);
 
-  if (perfil && !canAccessSupervisorConsole(perfil)) {
+  if (perfil && !canAccessSupervisorConsole(perfil, isPlatformUser)) {
     return <Navigate to="/" replace />;
   }
 

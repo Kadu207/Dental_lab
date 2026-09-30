@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, type Cliente } from "../api";
 import { ActionButton } from "../components/ui/ActionButton";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -35,11 +36,12 @@ type ViewMode = "3d" | "list" | "history";
 function OdontogramaPage() {
   const { can } = usePermissions();
   const canWrite = can(RESOURCE, "write");
+  const [searchParams] = useSearchParams();
 
   const [mounted, setMounted] = useState(false);
   const [pacientes, setPacientes] = useState<Cliente[]>([]);
   const [pacientesErro, setPacientesErro] = useState("");
-  const [pacienteId, setPacienteId] = useState("");
+  const [pacienteId, setPacienteId] = useState(() => searchParams.get("pacienteId") ?? "");
   const [activeCondition, setActiveCondition] = useState<ToothConditionId>("carie");
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null);
   const [stateMap, setStateMap] = useState<ToothStateMap>({});

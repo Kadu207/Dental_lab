@@ -9,7 +9,7 @@ function tenantLabel(t: TenantRecord) {
 }
 
 export default function SupervisorImportPage() {
-  const { perfil } = useSession();
+  const { perfil, isPlatformUser } = useSession();
   const [tenants, setTenants] = useState<TenantRecord[]>([]);
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [clinicaId, setClinicaId] = useState("");
@@ -30,7 +30,7 @@ export default function SupervisorImportPage() {
     });
   }, []);
 
-  if (perfil && !canAccessSupervisorConsole(perfil)) {
+  if (perfil && !canAccessSupervisorConsole(perfil, isPlatformUser)) {
     return <Navigate to="/" replace />;
   }
 

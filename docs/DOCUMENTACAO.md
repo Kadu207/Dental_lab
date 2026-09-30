@@ -8,6 +8,15 @@
 > Stack: **TanStack Start v1 (React 19 + Vite 7)** · TypeScript estrito · Tailwind CSS v4 · shadcn/ui · TanStack Query · Three.js.
 > Backend: **API Express externa** (multi-tenant) consumida por HTTP. Não há banco local neste frontend.
 
+
+### Roadmap e integrações (2026-07)
+
+| Doc | Descrição |
+|-----|-----------|
+| [ROADMAP-EVOLUCAO.md](./ROADMAP-EVOLUCAO.md) | Ondas Spec Kit, metodologia, gates |
+| [CAM-CONNECTOR.md](./CAM-CONNECTOR.md) | Pasta do paciente, Scanner→Elegoo/fresadoras, registry SDKs |
+| [INTEGRACOES-CHATWOOT-N8N.md](./INTEGRACOES-CHATWOOT-N8N.md) | Webhooks HMAC, eventos tenant, dual-mode |
+
 ---
 
 ## 1. Visão geral
@@ -419,4 +428,14 @@ Resumo:
 
 ---
 
+## 16. Busca, idempotência e retry (monorepo)
+
+A busca de pacientes no monorepo (`GET /api/clientes?q=`) usa full-text no Postgres (`search_vector` + GIN) e FTS5 no SQLite. Não há `LIKE '%termo%'`. Webhooks N8N/Chatwoot deduplicam em `integration_events` e a saída repete só falhas transitórias.
+
+Guia: [DB-MIGRACAO-E-HARDENING.md](./DB-MIGRACAO-E-HARDENING.md).
+
+---
+
 _Documento gerado a partir da leitura integral do código-fonte do projeto._
+
+

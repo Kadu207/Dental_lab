@@ -22,7 +22,7 @@
 
 - **Stack export:** TanStack Start v1, Tailwind v4, shadcn/ui, TanStack Query, Three.js (odontograma).
 - **Stack monorepo:** React Router + Vite 6, CSS custom — ver [LOVABLE-INTEGRACAO.md](./LOVABLE-INTEGRACAO.md).
-- **Novidade principal:** módulo **Odontograma 3D** (`/odontograma`) — ainda **sem API** no `apps/api`.
+- **Novidade principal:** módulo **Odontograma 3D** (`/odontograma`). A API do monorepo expõe `/api/odontograma`.
 - **Alinhado:** auth, supervisor, fornecedores, grupos, design tokens (Outfit/DM Sans).
 
 ---

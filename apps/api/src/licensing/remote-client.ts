@@ -1,4 +1,5 @@
 import { LICENSE_SERVER_API_KEY, LICENSE_SERVER_URL } from "../config.js";
+import { isRetryableStatus, isTransientNetworkError, retryDelayMs } from "../reliability/retry.js";
 
 export type RemoteLicensePayload = {
   valid?: boolean;
@@ -78,16 +79,19 @@ async function fetchWithRetry(
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       const res = await fetch(url, init);
-      if (res.status >= 500 && attempt < MAX_RETRIES - 1) {
-        await sleep(RETRY_BASE_MS * 2 ** attempt);
+      if (isRetryableStatus(res.status) && attempt < MAX_RETRIES - 1) {
+        await res.arrayBuffer().catch(() => undefined);
+        await sleep(retryDelayMs(attempt, RETRY_BASE_MS));
         continue;
       }
       return res;
     } catch (err) {
       lastError = err;
-      if (attempt < MAX_RETRIES - 1) {
-        await sleep(RETRY_BASE_MS * 2 ** attempt);
+      if (attempt < MAX_RETRIES - 1 && isTransientNetworkError(err)) {
+        await sleep(retryDelayMs(attempt, RETRY_BASE_MS));
+        continue;
       }
+      throw err instanceof Error ? err : new Error("LICENSE_SERVER_UNREACHABLE");
     }
   }
   throw lastError instanceof Error ? lastError : new Error("LICENSE_SERVER_UNREACHABLE");

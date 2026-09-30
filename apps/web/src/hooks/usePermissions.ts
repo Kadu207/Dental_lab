@@ -1,15 +1,15 @@
 import { useCallback, useState } from "react";
 import { api } from "../api";
-import { getLabUser } from "../lib/auth";
+import { canAccessSupervisorConsole, getLabUser } from "../lib/auth";
 import { useSession } from "../lib/SessionContext";
 
 export type RbacAction = "read" | "write" | "delete";
 
 export function usePermissions() {
-  const { permissoes, perfil, loading, setSession } = useSession();
+  const { permissoes, perfil, isPlatformUser, loading, setSession } = useSession();
   const [refreshing, setRefreshing] = useState(false);
 
-  const isSupervisor = perfil === "supervisor";
+  const isSupervisor = canAccessSupervisorConsole(perfil, isPlatformUser);
 
   const can = useCallback(
     (resource: string, action: RbacAction): boolean => {
@@ -26,7 +26,7 @@ export function usePermissions() {
     setRefreshing(true);
     try {
       const me = await api.auth.me();
-      setSession(me.permissoes ?? null, me.perfil);
+      setSession(me.permissoes ?? null, me.perfil, me.isPlatformUser ?? false);
       return me;
     } finally {
       setRefreshing(false);

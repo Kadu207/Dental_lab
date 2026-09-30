@@ -23,6 +23,7 @@ const EXEMPT_PREFIXES = [
   "/api/licencas",
   "/api/auth",
   "/api/supervisor",
+  "/api/webhooks",
 ];
 
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -41,6 +42,23 @@ function isWriteExempt(path: string, method: string): boolean {
   if (method.toUpperCase() !== "POST") return false;
   if (path === "/api/licencas/ativar" || path.startsWith("/api/licencas/ativar/")) return true;
   return false;
+}
+
+function isPlatformAuth(req: Request): boolean {
+  return Boolean(req.auth?.isPlatformUser);
+}
+
+/** Tenant do token; header X-Clinica-Id só para plataforma. */
+export function resolveLicenseClinicaId(req: Request): number {
+  if (isPlatformAuth(req)) {
+    const header = req.headers["x-clinica-id"];
+    if (header != null && String(header).trim() !== "") {
+      const cid = Number(header);
+      if (Number.isFinite(cid) && cid > 0) return cid;
+    }
+  }
+  if (req.auth && req.auth.clinicaId > 0) return req.auth.clinicaId;
+  return 1;
 }
 
 function isSupervisorToken(req: Request): boolean {
@@ -76,9 +94,9 @@ export async function licenseGate(req: Request, res: Response, next: NextFunctio
     return next();
   }
 
-  if (isSupervisorToken(req)) return next();
+  if (isSupervisorToken(req) || isPlatformAuth(req)) return next();
 
-  const clinicaId = Number(req.headers["x-clinica-id"] ?? req.auth?.clinicaId ?? 1);
+  const clinicaId = resolveLicenseClinicaId(req);
   const write = isWriteMethod(method);
 
   if (write && isWriteExempt(path, method)) {

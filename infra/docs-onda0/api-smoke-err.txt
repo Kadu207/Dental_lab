@@ -1,0 +1,1 @@
+[dental-lab] Usuário inicial standalone: admin / admin123 — altere a senha em produção.

@@ -294,8 +294,22 @@ export async function generateLicense(input: {
   throw new Error("LICENSE_GENERATION_FAILED");
 }
 
-export async function listLicenses(limit = 200): Promise<LicenseRow[]> {
-  const rows = await queryAll(`SELECT * FROM ${qualified(TABLE)} ORDER BY id DESC LIMIT ?`, [limit]);
+export async function listLicenses(opts?: {
+  clinicaId?: number | null;
+  allTenants?: boolean;
+  limit?: number;
+}): Promise<LicenseRow[]> {
+  const limit = opts?.limit ?? 200;
+  if (opts?.allTenants === true) {
+    const rows = await queryAll(`SELECT * FROM ${qualified(TABLE)} ORDER BY id DESC LIMIT ?`, [limit]);
+    return rows.map(mapRow);
+  }
+  const clinicaId = opts?.clinicaId;
+  if (clinicaId == null || !Number.isFinite(clinicaId) || clinicaId <= 0) return [];
+  const rows = await queryAll(
+    `SELECT * FROM ${qualified(TABLE)} WHERE clinica_id = ? ORDER BY id DESC LIMIT ?`,
+    [clinicaId, limit],
+  );
   return rows.map(mapRow);
 }
 

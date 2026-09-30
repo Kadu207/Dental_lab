@@ -6,7 +6,7 @@ Este repositório é um **produto separado** do Excellence Dental Cloud. Pode ro
 
 ### A) Standalone (só o laboratório)
 
-- API + **Postgres dedicado** (`docker-compose.standalone.yml`) ou SQLite em dev.
+- API + **Postgres dedicado** (`docker-compose.standalone.yml`) ou SQLite em dev. A subida aplica full-text de pacientes e a tabela de idempotência (`docs/DB-MIGRACAO-E-HARDENING.md`).
 - Login próprio: `POST /api/auth/login` → usuários em `dental_lab.lab_usuarios` (padrão `admin` / `admin123`).
 - Front: build estático servido atrás do mesmo domínio da API ou com `VITE_DENTAL_LAB_API_URL` apontando para a API.
 - `DENTAL_LAB_LICENSE_REQUIRED=true` e `DENTAL_LAB_LICENSE_KEY` definidos no servidor da API.

@@ -164,7 +164,7 @@ function scrollToCadastroForm() {
 
 export default function SupervisorCadastroPage() {
   const navigate = useNavigate();
-  const { perfil, loading: sessionLoading } = useSession();
+  const { perfil, isPlatformUser, loading: sessionLoading } = useSession();
   const [rows, setRows] = useState<TenantOverview[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState<FormState>({ ...EMPTY_FORM });
@@ -175,6 +175,7 @@ export default function SupervisorCadastroPage() {
   const [loading, setLoading] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [showSenha, setShowSenha] = useState(false);
+  const [unidadeDrafts, setUnidadeDrafts] = useState<{ nome: string; cidade: string; estado: string }[]>([]);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(() => {
@@ -191,7 +192,7 @@ export default function SupervisorCadastroPage() {
     };
   }, []);
 
-  if (!sessionLoading && perfil && !canAccessSupervisorConsole(perfil)) {
+  if (!sessionLoading && perfil && !canAccessSupervisorConsole(perfil, isPlatformUser)) {
     return <Navigate to="/" replace />;
   }
 
@@ -231,6 +232,7 @@ export default function SupervisorCadastroPage() {
   function novo() {
     setEditingId(null);
     setForm({ ...EMPTY_FORM });
+    setUnidadeDrafts([]);
     setErro("");
     setMsg("Nova empresa — preencha os dados comerciais e o acesso ao sistema (usuário, senha e e-mail).");
     pulseFormPanel();
@@ -295,7 +297,17 @@ export default function SupervisorCadastroPage() {
         setLoading(false);
         return;
       }
-      const body = { ...payload, ...bootstrap };
+      const body: Record<string, unknown> = { ...payload, ...bootstrap };
+      if (isNew) {
+        const unidades = unidadeDrafts
+          .map((u) => ({
+            nome: u.nome.trim(),
+            cidade: u.cidade.trim() || null,
+            estado: u.estado.trim().toUpperCase().slice(0, 2) || null,
+          }))
+          .filter((u) => u.nome);
+        if (unidades.length) body.unidades = unidades;
+      }
       if (editingId) {
         const updated = await api.supervisor.updateTenant(editingId, body);
         setMsg(
@@ -314,6 +326,7 @@ export default function SupervisorCadastroPage() {
         );
         setEditingId(created.clinicaId);
         setForm((prev) => ({ ...tenantToForm(created), adminSenha: "" }));
+        setUnidadeDrafts([]);
       }
       refresh();
     } catch (err) {
@@ -452,7 +465,7 @@ export default function SupervisorCadastroPage() {
                 icon={<IconKey size={14} />}
                 onClick={() => abrirLicenca(editingRow.clinicaId)}
               >
-                Licença
+                Gerenciar licença
               </ActionButton>
               {editingRow.clinicaId > 1 ? (
                 <ActionButton
@@ -562,6 +575,74 @@ export default function SupervisorCadastroPage() {
                 <option value="active">Ativo — acesso liberado</option>
                 <option value="suspended">Suspenso — acesso bloqueado</option>
               </select>
+            </div>
+          ) : null}
+
+          {isNew ? (
+            <div className="full cadastro-unidades-box">
+              <h4 className="cadastro-acesso-title">Unidades / filiais iniciais (opcional)</h4>
+              <p className="muted cadastro-acesso-desc">
+                Cada unidade recebe trial de 30 dias. Também dá para cadastrar depois em Empresa.
+              </p>
+              {unidadeDrafts.map((u, idx) => (
+                <div key={idx} className="form-grid" style={{ marginBottom: 8 }}>
+                  <div className="form-group full">
+                    <label>Nome da unidade</label>
+                    <input
+                      value={u.nome}
+                      onChange={(e) => {
+                        const next = [...unidadeDrafts];
+                        next[idx] = { ...next[idx], nome: e.target.value };
+                        setUnidadeDrafts(next);
+                      }}
+                      placeholder="Ex.: Unidade Centro"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Cidade</label>
+                    <input
+                      value={u.cidade}
+                      onChange={(e) => {
+                        const next = [...unidadeDrafts];
+                        next[idx] = { ...next[idx], cidade: e.target.value };
+                        setUnidadeDrafts(next);
+                      }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>UF</label>
+                    <input
+                      value={u.estado}
+                      maxLength={2}
+                      onChange={(e) => {
+                        const next = [...unidadeDrafts];
+                        next[idx] = { ...next[idx], estado: e.target.value.toUpperCase() };
+                        setUnidadeDrafts(next);
+                      }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>&nbsp;</label>
+                    <ActionButton
+                      variant="ghost"
+                      type="button"
+                      size="sm"
+                      onClick={() => setUnidadeDrafts(unidadeDrafts.filter((_, i) => i !== idx))}
+                    >
+                      Remover
+                    </ActionButton>
+                  </div>
+                </div>
+              ))}
+              <ActionButton
+                variant="outline"
+                type="button"
+                size="sm"
+                icon={<IconPlus size={14} />}
+                onClick={() => setUnidadeDrafts([...unidadeDrafts, { nome: "", cidade: "", estado: "" }])}
+              >
+                Adicionar unidade
+              </ActionButton>
             </div>
           ) : null}
 

@@ -168,9 +168,12 @@ CREATE TABLE IF NOT EXISTS dental_lab.financeiro (
   data_vencimento TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'Pendente',
   forma_pagamento TEXT,
+  paciente_id TEXT,
+  protese_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_lab_financeiro_clinica ON dental_lab.financeiro (clinica_id);
+-- idx_lab_financeiro_paciente: criado em initPostgres após ALTER (bases antigas sem paciente_id)
 
 CREATE TABLE IF NOT EXISTS dental_lab.procedimentos (
   id TEXT PRIMARY KEY,
@@ -203,3 +206,68 @@ CREATE TABLE IF NOT EXISTS dental_lab.odontograma (
   PRIMARY KEY (clinica_id, paciente_id)
 );
 CREATE INDEX IF NOT EXISTS idx_lab_odontograma_clinica ON dental_lab.odontograma (clinica_id);
+
+CREATE TABLE IF NOT EXISTS dental_lab.paciente_pastas (
+  id TEXT PRIMARY KEY,
+  clinica_id INTEGER NOT NULL,
+  paciente_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (clinica_id, paciente_id)
+);
+CREATE INDEX IF NOT EXISTS idx_lab_paciente_pastas_clinica ON dental_lab.paciente_pastas (clinica_id);
+
+CREATE TABLE IF NOT EXISTS dental_lab.paciente_anexos (
+  id TEXT PRIMARY KEY,
+  clinica_id INTEGER NOT NULL,
+  pasta_id TEXT NOT NULL,
+  paciente_id TEXT NOT NULL,
+  tipo TEXT NOT NULL DEFAULT 'scan',
+  nome_arquivo TEXT NOT NULL,
+  mime TEXT,
+  checksum_sha256 TEXT,
+  storage_key TEXT NOT NULL,
+  tamanho_bytes INTEGER NOT NULL DEFAULT 0,
+  protese_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_lab_paciente_anexos_paciente ON dental_lab.paciente_anexos (clinica_id, paciente_id);
+
+CREATE TABLE IF NOT EXISTS dental_lab.cam_jobs (
+  id TEXT PRIMARY KEY,
+  clinica_id INTEGER NOT NULL,
+  paciente_id TEXT NOT NULL,
+  anexo_id TEXT,
+  protese_id TEXT,
+  adapter_id TEXT NOT NULL,
+  capability TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'queued',
+  perfil TEXT,
+  mensagem TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_lab_cam_jobs_paciente ON dental_lab.cam_jobs (clinica_id, paciente_id);
+
+-- RLS fail-closed por clinica_id (FORCE porque o role da API é dono das tabelas).
+-- product_licenses fica de fora: o serviço de licença usa pool sem GUC.
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'lab_usuarios','clientes','fornecedores','estoque','proteses','status_historico','config',
+    'empresa','empresa_unidades','financeiro','procedimentos','grupos_permissoes','odontograma',
+    'paciente_pastas','paciente_anexos','cam_jobs'
+  ]
+  LOOP
+    EXECUTE format('ALTER TABLE dental_lab.%I ENABLE ROW LEVEL SECURITY', t);
+    EXECUTE format('ALTER TABLE dental_lab.%I FORCE ROW LEVEL SECURITY', t);
+    EXECUTE format('DROP POLICY IF EXISTS tenant_clinica_isolation ON dental_lab.%I', t);
+    EXECUTE format(
+      'CREATE POLICY tenant_clinica_isolation ON dental_lab.%I
+         USING (clinica_id = NULLIF(current_setting(''app.clinica_id'', true), '''')::integer)
+         WITH CHECK (clinica_id = NULLIF(current_setting(''app.clinica_id'', true), '''')::integer)',
+      t
+    );
+  END LOOP;
+END $$;
+

@@ -9,6 +9,17 @@
 
 Sistema modular para gestão de clínica odontológica e laboratório de próteses.
 
+## Roadmap e metodologia (jul/2026)
+
+Planejamento aprovado: pasta digital por paciente, pipeline Scanner 3D → Elegoo Mars 5 Ultra / fresadoras (registry de SDKs), Chatwoot/N8N, responsivo, Excellence Fase 4, empresas, financeiro.
+
+- Roadmap: [docs/ROADMAP-EVOLUCAO.md](docs/ROADMAP-EVOLUCAO.md)
+- CAM / SDKs: [docs/CAM-CONNECTOR.md](docs/CAM-CONNECTOR.md)
+- Chatwoot/N8N: [docs/INTEGRACOES-CHATWOOT-N8N.md](docs/INTEGRACOES-CHATWOOT-N8N.md)
+- Metodologia: SDD + Spec Kit + TDD + EDD — ver [AGENTS.md](AGENTS.md)
+
+**Ordem:** responsivo → pacientes/Excellence → empresas/integrações → **CAM** → financeiro.
+
 ## Estrutura
 
 ```
@@ -29,6 +40,7 @@ dental-lab-system/
 - **Próteses** — registro com código de barras único
 - **Etiquetas 3 vias** — impressão profissional (laboratório, clínica, paciente)
 - **Leitor de código de barras** — rastreio de status no laboratório
+- **CAD/CAM (roadmap)** — scanners 3D, impressoras (ex. Elegoo Mars 5 Ultra), fresadoras via adapters/SDKs
 
 ## Modelo de Etiqueta — 3 Vias
 
@@ -99,7 +111,9 @@ pwsh ./scripts/tenant_clinica_smoke.ps1
 | [INTEGRATION.md](./INTEGRATION.md) | Standalone vs embedded |
 | [EXCELLENCE-FASE4.md](./EXCELLENCE-FASE4.md) | Checklist integração Excellence |
 | [PRODUCAO-CHECKLIST.md](./PRODUCAO-CHECKLIST.md) | Testes, backup, impressora |
-| [docs/DB-MIGRACAO-E-HARDENING.md](./docs/DB-MIGRACAO-E-HARDENING.md) | Fluxo seguro de migração e hardening |
+| [docs/DB-MIGRACAO-E-HARDENING.md](./docs/DB-MIGRACAO-E-HARDENING.md) | Migração, full-text, idempotência e retry |
+| [docs/INTEGRACOES-CHATWOOT-N8N.md](./docs/INTEGRACOES-CHATWOOT-N8N.md) | Webhooks N8N/Chatwoot |
+| [docs/ROADMAP-EVOLUCAO.md](./docs/ROADMAP-EVOLUCAO.md) | Ondas 006–013 |
 
 ## Licença, CORS e modo standalone/embedded
 
@@ -133,9 +147,12 @@ import {
 |--------|------|-----------|
 | GET | `/api/health` | Saúde + modo implantação |
 | GET | `/api/license/status` | Metadado de licença (sem segredo) |
-| GET/POST | `/api/clientes` | CRUD clientes |
+| GET/POST | `/api/clientes` | CRUD clientes. `q` usa full-text (sem `LIKE`) |
 | GET/POST | `/api/fornecedores` | CRUD fornecedores |
 | GET/POST | `/api/estoque` | CRUD estoque |
 | GET/POST | `/api/proteses` | Registro de próteses |
 | GET | `/api/proteses/:id/imprimir` | HTML 3 vias |
 | POST | `/api/scanner/scan` | Leitor de código de barras |
+
+
+

@@ -5,13 +5,19 @@ import { isAuthenticated } from "../lib/auth";
 interface SessionContextValue {
   permissoes: UsuarioPermissao[] | null;
   perfil: string | null;
+  isPlatformUser: boolean;
   loading: boolean;
-  setSession: (perms: UsuarioPermissao[] | null, perfil: string | null) => void;
+  setSession: (
+    perms: UsuarioPermissao[] | null,
+    perfil: string | null,
+    isPlatformUser?: boolean,
+  ) => void;
 }
 
 const SessionContext = createContext<SessionContextValue>({
   permissoes: null,
   perfil: null,
+  isPlatformUser: false,
   loading: true,
   setSession: () => {},
 });
@@ -19,12 +25,14 @@ const SessionContext = createContext<SessionContextValue>({
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [permissoes, setPermissoes] = useState<UsuarioPermissao[] | null>(null);
   const [perfil, setPerfil] = useState<string | null>(null);
+  const [isPlatformUser, setIsPlatformUser] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated()) {
       setPermissoes(null);
       setPerfil(null);
+      setIsPlatformUser(false);
       setLoading(false);
       return;
     }
@@ -33,21 +41,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .then((me) => {
         setPermissoes(me.permissoes ?? null);
         setPerfil(me.perfil);
+        setIsPlatformUser(Boolean(me.isPlatformUser));
       })
       .catch(() => {
         setPermissoes(null);
         setPerfil(null);
+        setIsPlatformUser(false);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const setSession = useCallback((perms: UsuarioPermissao[] | null, p: string | null) => {
-    setPermissoes(perms);
-    setPerfil(p);
-  }, []);
+  const setSession = useCallback(
+    (perms: UsuarioPermissao[] | null, p: string | null, platform?: boolean) => {
+      setPermissoes(perms);
+      setPerfil(p);
+      setIsPlatformUser(Boolean(platform));
+    },
+    [],
+  );
 
   return (
-    <SessionContext.Provider value={{ permissoes, perfil, loading, setSession }}>
+    <SessionContext.Provider value={{ permissoes, perfil, isPlatformUser, loading, setSession }}>
       {children}
     </SessionContext.Provider>
   );
