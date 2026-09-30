@@ -13,6 +13,7 @@ const EXEMPT_PREFIXES = [
   "/api/auth/status",
   "/api/auth/recuperar-senha",
   "/api/auth/perfis",
+  "/api/licencas/status",
   "/api/webhooks",
 ];
 
